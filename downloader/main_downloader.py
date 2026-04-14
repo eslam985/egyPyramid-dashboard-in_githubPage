@@ -744,7 +744,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         "--socket-timeout",
         "60",
         "--concurrent-fragments",
-        "10",
+        "3",
         "--file-access-retries",
         "infinite",
         "--fragment-retries",
