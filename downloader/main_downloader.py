@@ -765,20 +765,19 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
     # إضافة الرابط والمخرجات النهائية مع ضمان دمج أفضل فيديو وأفضل صوت
     # تحديد الجودة بذكاء: 1080p بحد أقصى 2GB، وإلا 720p
     # تحديد الجودة بذكاء: 1080p بمعدل نقل بيانات منخفض، أو 720p كخيار آمن جداً
-        cmd.extend(
+    cmd.extend(
         [
-            # التعديل هنا: ترتيب تنازلي من 1080 ثم 720 ثم 480 بشرط الحجم فقط
-            "-f", "(bestvideo[height<=1080][filesize<1950M]+bestaudio/best[height<=1080][filesize<1950M]) / (bestvideo[height<=720][filesize<1950M]+bestaudio/best[height<=720][filesize<1950M]) / (bestvideo[height<=480]+bestaudio/best[height<=480]) / best",
+            "-f", "bestvideo[height<=1080][vbr<4000]+bestaudio/best[height<=1080][vbr<4000] / bestvideo[height<=720]+bestaudio/best[height<=720] / best",
             "--merge-output-format", "mp4",
-            # صمام الأمان النهائي لمنع أي ملف أكبر من مساحة تليجرام
+            # إضافة سطر الحماية لمنع الملفات الضخمة تماماً
             "--max-filesize", "1950M", 
-            "--print", "format_id",
             f"{url}",
             "-o", download_path_template,
             "--newline",
             "--progress-template", "download:[%(progress._percent_str)s]",
         ]
     )
+
     # --- 🟢 منطق التحميل والتعامل الذكي (Async الكامل - الحل الجذري) ---
     if not is_local_file:
         print(f"🌐 رابط ويب، جاري التحميل بنظام Async Subprocess...")
