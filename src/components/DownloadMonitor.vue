@@ -122,18 +122,20 @@ const submitTask = async () => {
 };
 
 onMounted(() => {
-  // 1. تحميل البيانات الأولية
+  // 1. تنظيف أي قنوات قديمة عالقة في الذاكرة قبل بدء أي اتصال جديد
+  supabaseClient.removeAllChannels(); 
+
+  // 2. تحميل البيانات الأولية
   fetchTasks();
 
-  // 2. إعداد القناة اللحظية (بالترتيب الصحيح لقتل الأيرور)
+  // 3. إعداد القناة اللحظية
   const channel = supabaseClient
-    .channel('tasks-monitor') // اسم فريد للقناة
+    .channel('tasks-monitor')
     .on(
       'postgres_changes', 
       { event: '*', schema: 'public', table: 'download_tasks' }, 
       (payload) => {
         if (payload.eventType === 'INSERT') {
-          // إضافة المهمة الجديدة في بداية المصفوفة
           activeTasks.value.unshift(payload.new);
         } else if (payload.eventType === 'UPDATE') {
           const index = activeTasks.value.findIndex(t => t.id === payload.new.id);
@@ -146,10 +148,8 @@ onMounted(() => {
       }
     );
 
-  // السطر الحاسم: الـ subscribe يجب أن يكون منفصلاً في النهاية
-  channel.subscribe((status) => {
-    console.log('Realtime status for tasks:', status);
-  });
+  // السطر الحاسم
+  channel.subscribe();
 });
 
 onUnmounted(() => {

@@ -233,27 +233,36 @@ const selectedEpisodeId = ref(null);
 const props = defineProps(['search', 'id']);
 const isSaving = ref(false); // أضف هذا المتغير
 
+let mediaChannel = null; // تعريف المتغير في الأعلى
+
 onMounted(() => {
     loadMedia();
 
-    // تشغيل الاتصال اللحظي
-    supabaseClient
-        .channel('public:medias')
+    // تنظيف أي قنوات قديمة قبل البدء لضمان عدم تكرار الـ Callbacks
+    supabaseClient.removeAllChannels(); 
+
+    mediaChannel = supabaseClient
+        .channel('media-details-channel') // اسم مميز
         .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
             table: 'medias',
             filter: `id=eq.${route.params.id}`
         }, (payload) => {
+            console.log('تحديث لحظي للعمل...');
             loadMedia();
-        })
-        .subscribe();
+        });
+
+    mediaChannel.subscribe();
 });
 
-// إغلاق الاتصال عند الخروج من الصفحة
 onUnmounted(() => {
-    supabaseClient.channel('public:medias').unsubscribe();
+    if (mediaChannel) {
+        supabaseClient.removeChannel(mediaChannel);
+    }
 });
+
+
 const loadMedia = async () => {
     try {
         const { data, error } = await supabaseClient.from('medias').select('*, episodes(*)').eq('id', route.params.id).single();
