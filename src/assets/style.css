@@ -1,0 +1,22 @@
+/* ========================================
+   ملف الأنماط الرئيسي - Guardian Ultra
+   تصميم مرن وقابل للتوسع مع نظام الألوان الداكن/الفاتح
+   ======================================== */
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark-mode, .dark-mode *));
+
+@theme {
+    --color-primary: #2563eb;
+    --color-primary-dark: #1d4ed8;
+    --color-secondary-dark: #0d1117;
+
+    --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+    --variant-dark: selector(.dark-mode &);
+}
+
+@layer components {
+    .my-card {
+        @apply bg-white dark:bg-[#1e2939] shadow-card;
+    }
+}
