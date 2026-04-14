@@ -732,8 +732,6 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
     # 2. بناء أمر الوحش الموحد لضمان تجاوز الحماية في كل الحالات
     cmd = [
         "yt-dlp",
-        "--impersonate",
-        "chrome",
         "-v",
         "--no-playlist",
         "--user-agent",
