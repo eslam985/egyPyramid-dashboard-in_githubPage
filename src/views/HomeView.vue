@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <main class="w-full max-w-7xl mx-auto p-4 md:p-8">
+    <main class="w-full max-w-[1400px] mx-auto py-4 md:p-8">
       <!-- مكون مراقبة التحميل (إذا كان موجوداً) -->
       <DownloadMonitor />
 
@@ -37,7 +37,7 @@
       </header>
 
       <!-- شبكة البطاقات -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div class="grid grid-cols-3   sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 md:gap-4 p-2">
         <template v-if="loading">
           <MediaSkeleton v-for="i in 12" :key="'skeleton-' + i" />
         </template>
@@ -85,7 +85,7 @@ import MediaSkeleton from '../components/MediaSkeleton.vue';
 
 const props = defineProps({
   search: {
-    type: String, 
+    type: String,
     default: ''
   }
 });
@@ -122,7 +122,7 @@ onUnmounted(() => {
 const loadMediaList = async (page = 1) => {
   loading.value = true;
   try {
-    const limit = 12; // نفس العدد اللي انت محدده في الـ Pagination
+    const limit = 32; // نفس العدد اللي انت محدده في الـ Pagination
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 

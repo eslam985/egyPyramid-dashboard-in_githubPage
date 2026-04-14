@@ -5,7 +5,7 @@
         <i class="fa fa-arrow-right"></i> العودة للرئيسية
     </button>
     <MediaDetailsSkeleton v-if="!mediaData.title" />
-    <div v-else class="media-details-container my-card max-w-6xl mx-auto mt-5 p-5 flex flex-col gap-5 rounded-2xl">
+    <div v-else class="media-details-container my-card max-w-[1400px] mx-auto mt-5 px-2 md:p-5 flex flex-col gap-5 rounded-2xl">
         <!-- رأس الصفحة: صورة + معلومات قابلة للتعديل -->
         <div class="details-header flex flex-col md:flex-row-reverse justify-evenly gap-6 mb-8">
             <!-- جانب الصورة -->
@@ -148,7 +148,7 @@
             </div>
 
             <!-- شبكة الحلقات -->
-            <div class="episodes-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            <div class="episodes-grid grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4"
                 v-if="mediaData.episodes && mediaData.episodes.length > 0">
                 <div v-for="ep in mediaData.episodes" :key="ep.id"
                     class="ep-card my-card flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700">
@@ -239,11 +239,11 @@ onMounted(async () => {
     await loadMedia();
 
     // 2. مسح أي قنوات قديمة عالقة (الخطوة الدفاعية)
-    await supabaseClient.removeAllChannels(); 
+    await supabaseClient.removeAllChannels();
 
     // 3. إضافة تأخير بسيط (100ms) لضمان إتمام عملية المسح في السيرفر
     setTimeout(async () => {
-        
+
         // 4. إنشاء القناة الجديدة
         mediaChannel = supabaseClient
             .channel(`media-details-${route.params.id}`) // استخدم ID العمل في الاسم لجعله فريداً
@@ -264,7 +264,7 @@ onMounted(async () => {
             }
         });
 
-    }, 100); 
+    }, 100);
 });
 
 onUnmounted(async () => {
@@ -295,16 +295,16 @@ const updateLink = async (link) => {
     // تم حذف URLSearchParams لأن سوبابيز تتعامل مع JSON مباشرة
     await supabaseClient
         .from('links')
-        .update({ 
-            server_name: link.server_name, 
-            url: link.url 
+        .update({
+            server_name: link.server_name,
+            url: link.url
         })
         .eq('id', link.id);
 };
 
 const addNewLink = async (epId) => {
     await supabaseClient.from('links').insert([{ episode_id: epId, server_name: 'New Server', url: '' }]);
-    manageLinks(epId); 
+    manageLinks(epId);
 };
 
 // --- منطق الحلقات ---
@@ -349,7 +349,7 @@ const saveMediaDetails = async () => {
         notifySuccess('تم تحديث بيانات العمل بنجاح');
         await loadMedia();
     } catch (e) {
-       notifyError(e.message || 'فشل في حفظ البيانات'); // ✅ سوبابيز تضع الخطأ في e.message    
+        notifyError(e.message || 'فشل في حفظ البيانات'); // ✅ سوبابيز تضع الخطأ في e.message    
     } finally {
         isSaving.value = false;
     }
