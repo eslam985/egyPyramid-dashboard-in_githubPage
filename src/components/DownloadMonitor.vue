@@ -121,44 +121,47 @@ const submitTask = async () => {
   }
 };
 
-onMounted(async () => { // أضفنا async هنا لضمان ترتيب العمليات
-  // 1. مسح شامل لأي قنوات قديمة عالقة (الأمان أولاً)
+onMounted(async () => {
+  // 1. مسح شامل وصارم لأي قنوات قديمة عالقة
   await supabaseClient.removeAllChannels(); 
 
-  // 2. تحميل البيانات الأولية (تأكد أن البيانات تظهر قبل بدء المراقبة)
-  await fetchTasks();
+  // 2. انتظر 100 ملي ثانية فقط لضمان استيعاب سوبابيز لعملية المسح
+  setTimeout(async () => {
+    
+    // 3. تحميل البيانات الأولية
+    await fetchTasks();
 
-  // 3. إعداد القناة اللحظية (الـ Realtime)
-  const channel = supabaseClient
-    .channel('tasks-monitor')
-    .on(
-      'postgres_changes', 
-      { event: '*', schema: 'public', table: 'download_tasks' }, 
-      (payload) => {
-        // منطق التحديث (Insert/Update/Delete)
-        if (payload.eventType === 'INSERT') {
-          activeTasks.value.unshift(payload.new);
-        } else if (payload.eventType === 'UPDATE') {
-          const index = activeTasks.value.findIndex(t => t.id === payload.new.id);
-          if (index !== -1) {
-            activeTasks.value[index] = payload.new;
+    // 4. إعداد القناة اللحظية (الـ Realtime)
+    const channel = supabaseClient
+      .channel('tasks-monitor')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'download_tasks' }, 
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            activeTasks.value.unshift(payload.new);
+          } else if (payload.eventType === 'UPDATE') {
+            const index = activeTasks.value.findIndex(t => t.id === payload.new.id);
+            if (index !== -1) {
+              activeTasks.value[index] = payload.new;
+            }
+          } else if (payload.eventType === 'DELETE') {
+            activeTasks.value = activeTasks.value.filter(t => t.id !== payload.old.id);
           }
-        } else if (payload.eventType === 'DELETE') {
-          activeTasks.value = activeTasks.value.filter(t => t.id !== payload.old.id);
         }
-      }
-    );
+      );
 
-  // 4. الاشتراك الرسمي
-  channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-          console.log('✅ الاتصال اللحظي يعمل بنجاح وبدون تكرار');
-      }
-  });
+    // 5. الاشتراك الرسمي
+    channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+            console.log('✅ تم الاتصال بنجاح بعد تنظيف الذاكرة');
+        }
+    });
+
+  }, 200); // هذا التأخير هو "المفتاح السحري"
 });
 
 onUnmounted(async () => {
-  // تنظيف القنوات عند مغادرة الصفحة يضمن عدم بقاء اتصال "شبح" في الخلفية
   await supabaseClient.removeAllChannels();
 });
 

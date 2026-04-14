@@ -232,40 +232,48 @@ const showLinksModal = ref(false);
 const selectedEpisodeId = ref(null);
 const props = defineProps(['search', 'id']);
 const isSaving = ref(false); // أضف هذا المتغير
-
 let mediaChannel = null;
 
-onMounted(async () => { // أضفنا async هنا
-    // 1. تحميل البيانات
+onMounted(async () => {
+    // 1. تحميل البيانات الأساسية أولاً
     await loadMedia();
 
-    // 2. مسح شامل للقنوات القديمة لضمان عدم حدوث تضارب (Conflict)
+    // 2. مسح أي قنوات قديمة عالقة (الخطوة الدفاعية)
     await supabaseClient.removeAllChannels(); 
 
-    // 3. إنشاء القناة الجديدة
-    mediaChannel = supabaseClient
-        .channel('media-details-channel')
-        .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'medias',
-            filter: `id=eq.${route.params.id}`
-        }, (payload) => {
-            console.log('تحديث لحظي للعمل...');
-            loadMedia();
+    // 3. إضافة تأخير بسيط (100ms) لضمان إتمام عملية المسح في السيرفر
+    setTimeout(async () => {
+        
+        // 4. إنشاء القناة الجديدة
+        mediaChannel = supabaseClient
+            .channel(`media-details-${route.params.id}`) // استخدم ID العمل في الاسم لجعله فريداً
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'medias',
+                filter: `id=eq.${route.params.id}`
+            }, (payload) => {
+                console.log('🔄 تحديث لحظي للعمل...');
+                loadMedia();
+            });
+
+        // 5. بدء الاشتراك
+        mediaChannel.subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('✅ قناة التفاصيل تعمل بنجاح');
+            }
         });
 
-    // 4. الاشتراك
-    mediaChannel.subscribe();
+    }, 100); 
 });
 
 onUnmounted(async () => {
     if (mediaChannel) {
-        // حذف القناة المحددة عند مغادرة الصفحة
+        // حذف القناة عند الخروج لمنع استهلاك الـ Quota
         await supabaseClient.removeChannel(mediaChannel);
+        console.log('🚿 تم تنظيف قناة التفاصيل');
     }
 });
-
 
 const loadMedia = async () => {
     try {

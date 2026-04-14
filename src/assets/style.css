@@ -6,6 +6,28 @@
 
 @custom-variant dark (&:where(.dark-mode, .dark-mode *));
 
+@layer base {
+    html {
+        /* تصغير الخط الأساسي للنظام بالكامل */
+        font-size: 13px;
+    }
+
+    body {
+        /* منع الخطوط من التمدد الزائد وتحسين القراءة في لوحات التحكم */
+        @apply antialiased tracking-tight text-slate-900 dark:text-slate-100 bg-gray-50 dark:bg-[#0d1117];
+    }
+
+    /* تصغير الفراغات الافتراضية للجداول والقوائم لزيادة كثافة البيانات */
+    table {
+        @apply w-full border-collapse;
+    }
+
+    th,
+    td {
+        @apply py-1 px-2 border-b border-gray-200 dark:border-gray-800;
+    }
+}
+
 @theme {
     --color-primary: #2563eb;
     --color-primary-dark: #1d4ed8;
