@@ -75,13 +75,13 @@
 
 <script setup>
 import Swal from 'sweetalert2';
-import { ref, computed, onMounted, watch } from 'vue';
-import api from '../services/api';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { supabaseClient } from '../services/supabase'; // تأكد أنه استيراد واحد فقط
 import MediaCard from '../components/MediaCard.vue';
 import DownloadMonitor from '../components/DownloadMonitor.vue';
 import MediaSkeleton from '../components/MediaSkeleton.vue';
-import { onUnmounted } from 'vue';
-import { supabaseClient } from '../services/supabase';
+
+// احذف سطر import api من هنا تماماً
 
 const props = defineProps({
   search: {
@@ -122,15 +122,45 @@ onUnmounted(() => {
 const loadMediaList = async (page = 1) => {
   loading.value = true;
   try {
-    const url = `/media/list?page=${page}&cat=${currentCategory.value}&status=${currentStatus.value}&search=${props.search}`;
-    const response = await api.get(url);
-    mediaList.value = response.data.data || [];
-    totalCount.value = response.data.total_count || 0;
-    totalPages.value = Math.ceil(totalCount.value / 12);
+    const limit = 12; // نفس العدد اللي انت محدده في الـ Pagination
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // بداية الاستعلام
+    let query = supabaseClient
+      .from('medias')
+      .select('*', { count: 'exact' });
+
+    // فلتر الحالة (منشور / مسودة)
+    if (currentStatus.value === 'published') {
+      query = query.eq('is_published', true);
+    } else if (currentStatus.value === 'draft') {
+      query = query.eq('is_published', false);
+    }
+
+    // فلتر النوع (فيلم / مسلسل)
+    if (currentCategory.value !== 'all') {
+      query = query.eq('category', currentCategory.value);
+    }
+
+    // فلتر البحث (Search)
+    if (props.search) {
+      query = query.ilike('title', `%${props.search}%`);
+    }
+
+    const { data, error, count } = await query
+      .range(from, to)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    mediaList.value = data || [];
+    totalCount.value = count || 0;
+    totalPages.value = Math.ceil(totalCount.value / limit);
     currentPage.value = page;
+
   } catch (error) {
-    console.error('خطأ في جلب البيانات:', error);
-    // يمكن إضافة إشعار للمستخدم هنا
+    console.error('خطأ في جلب البيانات من سوبابيز:', error);
   } finally {
     loading.value = false;
   }
@@ -147,46 +177,44 @@ watch(
 
 
 const handleDelete = async (id) => {
-  // التنبيه المودرن
   const result = await Swal.fire({
     title: 'هل أنت متأكد؟',
-    text: "سيتم حذف هذا العمل وجميع حلقاته وروابطه نهائياً!",
+    text: "سيتم حذف هذا العمل نهائياً من قاعدة البيانات!",
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonColor: '#ef4444', // لون أحمر متناسق مع Tailwind (red-500)
-    cancelButtonColor: '#6b7280',  // لون رمادي (gray-500)
-    confirmButtonText: 'نعم، احذف الكل',
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'نعم، احذف',
     cancelButtonText: 'تراجع',
-    background: '#1f2937', // لون Dark متناسق مع الداشبورد بتاعتك
-    color: '#ffffff',
-    iconColor: '#f87171'
+    background: '#1f2937',
+    color: '#ffffff'
   });
 
   if (result.isConfirmed) {
     try {
-      // إرسال الطلب الفعلي للسيرفر
-      const response = await api.post(`/media/delete/${id}`);
+      const { error } = await supabaseClient
+        .from('medias')
+        .delete()
+        .eq('id', id);
 
-      if (response.data.status === "deleted") {
-        // حذف من الشاشة
-        mediaList.value = mediaList.value.filter(item => item.id !== id);
-        totalCount.value -= 1;
+      if (error) throw error;
 
-        // رسالة نجاح سريعة (Toast)
-        Swal.fire({
-          icon: 'success',
-          title: 'تم الحذف بنجاح',
-          showConfirmButton: false,
-          timer: 1500,
-          background: '#1f2937',
-          color: '#ffffff'
-        });
-      }
+      mediaList.value = mediaList.value.filter(item => item.id !== id);
+      totalCount.value -= 1;
+
+      Swal.fire({
+        icon: 'success',
+        title: 'تم الحذف',
+        timer: 1500,
+        showConfirmButton: false,
+        background: '#1f2937',
+        color: '#ffffff'
+      });
     } catch (error) {
       Swal.fire({
         icon: 'error',
         title: 'فشل الحذف',
-        text: 'حدث خطأ أثناء الاتصال بالسيرفر، حاول مرة أخرى.',
+        text: error.message,
         background: '#1f2937',
         color: '#ffffff'
       });
