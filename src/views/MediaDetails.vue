@@ -218,14 +218,13 @@
 
 <script setup>
 import MediaDetailsSkeleton from '../components/MediaDetailsSkeleton.vue';
-import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import api from '../services/api';
 import { notifySuccess, notifyError, notifyLoading, confirmAction } from '../utils/alerts';
 import Swal from 'sweetalert2'; // تأكد أيضاً من إضافة هذا الاستيراد لاستخدامه في handleSyncClick و addNewEpisodeRow
 import { onUnmounted } from 'vue'; // أضفها مع الـ import اللي فوق
 import { supabaseClient } from '../services/supabase';
-
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+// احذف import api from '../services/api'
 const route = useRoute();
 const mediaData = ref({});
 const links = ref([]);
@@ -256,7 +255,8 @@ onUnmounted(() => {
 });
 const loadMedia = async () => {
     try {
-        const response = await api.get(`/media/details/${route.params.id}`);
+        const { data, error } = await supabaseClient.from('medias').select('*, episodes(*)').eq('id', route.params.id).single();
+        if (!error) mediaData.value = data;
         mediaData.value = response.data;
         // تم حذف الـ forEach هنا لمنع الضغط على سيرفر بلوجر
     } catch (e) { console.error(e); }
@@ -266,7 +266,8 @@ const loadMedia = async () => {
 const manageLinks = async (epId) => {
     selectedEpisodeId.value = epId;
     showLinksModal.value = true;
-    const res = await api.get(`/episodes/${epId}/links`);
+    const { data: resData } = await supabaseClient.from('links').select('*').eq('episode_id', epId);
+links.value = resData;
     links.value = res.data.links || res.data;
 };
 
@@ -302,7 +303,7 @@ const addNewEpisodeRow = async () => {
 const deleteEpisode = async (epId) => {
     const result = await confirmAction("لن تتمكن من استرجاع هذه الحلقة بعد الحذف!");
     if (result.isConfirmed) {
-        await api.post(`/episodes/${epId}/delete`);
+        await supabaseClient.from('episodes').delete().eq('id', epId);
         notifySuccess('تم حذف الحلقة بنجاح');
         loadMedia();
     }
@@ -342,7 +343,7 @@ const isSaving = ref(false); // أضف هذا المتغير
 const saveMediaDetails = async () => {
     isSaving.value = true;
     try {
-        await api.post(`/media/update/${route.params.id}`, mediaData.value);
+        await supabaseClient.from('medias').update(mediaData.value).eq('id', route.params.id);
         notifySuccess('تم تحديث بيانات العمل بنجاح');
         await loadMedia();
     } catch (e) {
