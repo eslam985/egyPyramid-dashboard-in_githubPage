@@ -85,63 +85,75 @@ import { supabaseClient } from '../services/supabase.js';
 const showModal = ref(false);
 const taskUrl = ref('');
 const taskName = ref('');
-// في الـ script setup
 const activeTasks = ref([]);
 
-onMounted(() => {
-  // 1. تحميل المهام الأولية
-  fetchTasks();
+// دالة جلب المهام
+const fetchTasks = async () => {
+  const { data, error } = await supabaseClient
+    .from('download_tasks')
+    .select('*')
+    .order('created_at', { ascending: false }); // ترتيب الأحدث أولاً
+  
+  if (!error) activeTasks.value = data || [];
+};
 
-  // 2. الاستماع لتغييرات جدول download_tasks لحظياً
-  const channel = supabaseClient
-    .channel('public:download_tasks')
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'download_tasks'
-    }, (payload) => {
-      // إذا تم إدراج مهمة جديدة أو تحديث حالة مهمة موجودة
-      if (payload.eventType === 'INSERT') {
-        activeTasks.value.push(payload.new);
-      } else if (payload.eventType === 'UPDATE') {
-        const index = activeTasks.value.findIndex(t => t.id === payload.new.id);
-        if (index !== -1) {
-          activeTasks.value[index] = payload.new;
-        }
-      } else if (payload.eventType === 'DELETE') {
-        activeTasks.value = activeTasks.value.filter(t => t.id !== payload.old.id);
-      }
-    })
-    .subscribe();
-});
-
-onUnmounted(() => {
-  supabaseClient.channel('public:download_tasks').unsubscribe();
-});
-
-// احذف متغير interval والـ setInterval تماماً، لم نعد بحاجة إليه!
+// إرسال مهمة جديدة
 const submitTask = async () => {
-  const { error } = await supabaseClient.from('download_tasks').insert([
-    {
-      source_url: taskUrl.value,
-      task_name: taskName.value,
-      status: 'idle',
-      status_message: 'Waiting for Beast...'
-    }
-  ]);
+  try {
+    const { error } = await supabaseClient.from('download_tasks').insert([
+      {
+        source_url: taskUrl.value,
+        task_name: taskName.value,
+        status: 'idle',
+        status_message: 'Waiting for Beast...',
+        progress_percent: 0 // قيمة افتراضية للبداية
+      }
+    ]);
 
-  if (!error) {
-    alert('✅ تم إرسال المهمة بنجاح!');
+    if (error) throw error;
+
     showModal.value = false;
     taskUrl.value = '';
     taskName.value = '';
-  } else {
-    alert('❌ فشل في إرسال المهمة');
+    // لا نحتاج لعمل fetchTasks هنا لأن الـ Realtime سيضيفها تلقائياً
+  } catch (error) {
+    alert('❌ فشل في إرسال المهمة: ' + error.message);
   }
 };
 
-const fetchTasks = async () => {
-  const { data } = await supabaseClient.from('download_tasks').select('*');
-  activeTasks.value = data || [];
-};
+onMounted(() => {
+  // 1. تحميل البيانات الأولية
+  fetchTasks();
+
+  // 2. إعداد القناة اللحظية (بالترتيب الصحيح لقتل الأيرور)
+  const channel = supabaseClient
+    .channel('tasks-monitor') // اسم فريد للقناة
+    .on(
+      'postgres_changes', 
+      { event: '*', schema: 'public', table: 'download_tasks' }, 
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          // إضافة المهمة الجديدة في بداية المصفوفة
+          activeTasks.value.unshift(payload.new);
+        } else if (payload.eventType === 'UPDATE') {
+          const index = activeTasks.value.findIndex(t => t.id === payload.new.id);
+          if (index !== -1) {
+            activeTasks.value[index] = payload.new;
+          }
+        } else if (payload.eventType === 'DELETE') {
+          activeTasks.value = activeTasks.value.filter(t => t.id !== payload.old.id);
+        }
+      }
+    );
+
+  // السطر الحاسم: الـ subscribe يجب أن يكون منفصلاً في النهاية
+  channel.subscribe((status) => {
+    console.log('Realtime status for tasks:', status);
+  });
+});
+
+onUnmounted(() => {
+  // تنظيف القنوات عند مغادرة الصفحة
+  supabaseClient.removeAllChannels();
+});
 </script>

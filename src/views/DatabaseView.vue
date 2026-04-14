@@ -185,28 +185,34 @@ const loadTableData = async () => {
   if (!activeTable.value) return;
   loading.value = true;
   try {
-    // حساب المدى (Pagination)
     const from = (page.value - 1) * limit;
     const to = from + limit - 1;
 
-    const { data: resData, error, count } = await supabaseClient
+    // 1. نبدأ الاستعلام بدون الترتيب (order)
+    let query = supabaseClient
       .from(activeTable.value)
       .select('*', { count: 'exact' })
-      .range(from, to)
-      .order('created_at', { ascending: false });
+      .range(from, to);
+
+    // 2. لا نطبق الترتيب بـ created_at إلا لو كان الجدول ليس media_genres
+    // لأن جداول العلاقات غالباً لا تملك هذا العمود وتسبب خطأ 400
+    if (activeTable.value !== 'media_genres') {
+      query = query.order('created_at', { ascending: false });
+    }
+
+    const { data: resData, error, count } = await query;
 
     if (error) throw error;
 
     data.value = resData;
     total.value = count;
   } catch (e) {
-    console.error(e);
+    console.error("Error Detail:", e); // هذا سيطبع لك سبب الخطأ الحقيقي في الكونسول
     notifyError(`فشل في جلب بيانات جدول ${activeTable.value}`);
   } finally {
     loading.value = false;
   }
 };
-
 const translateTableName = (name) => {
   const map = {
     'medias': 'الأعمال (Medias)',
