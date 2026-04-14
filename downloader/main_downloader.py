@@ -765,25 +765,20 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
     # إضافة الرابط والمخرجات النهائية مع ضمان دمج أفضل فيديو وأفضل صوت
     # تحديد الجودة بذكاء: 1080p بحد أقصى 2GB، وإلا 720p
     # تحديد الجودة بذكاء: 1080p بمعدل نقل بيانات منخفض، أو 720p كخيار آمن جداً
-    cmd.extend(
+        cmd.extend(
         [
-            "-f",
-            "(bestvideo[height<=1080][filesize<1950M]+bestaudio/best[height<=1080][filesize<1950M]) / (bestvideo[height<=720][filesize<1950M]+bestaudio/best[height<=720][filesize<1950M]) / (bestvideo[height<=480]+bestaudio/best[height<=480]) / best",
-            "--merge-output-format",
-            "mp4",
-            "--post-overwrites",
-            "--no-check-certificate",  # زيادة أمان للروابط المحمية
-            "--max-filesize",
-            "1950M",
+            # التعديل هنا: ترتيب تنازلي من 1080 ثم 720 ثم 480 بشرط الحجم فقط
+            "-f", "(bestvideo[height<=1080][filesize<1950M]+bestaudio/best[height<=1080][filesize<1950M]) / (bestvideo[height<=720][filesize<1950M]+bestaudio/best[height<=720][filesize<1950M]) / (bestvideo[height<=480]+bestaudio/best[height<=480]) / best",
+            "--merge-output-format", "mp4",
+            # صمام الأمان النهائي لمنع أي ملف أكبر من مساحة تليجرام
+            "--max-filesize", "1950M", 
+            "--print", "format_id",
             f"{url}",
-            "-o",
-            download_path_template,
+            "-o", download_path_template,
             "--newline",
-            "--progress-template",
-            "download:[%(progress._percent_str)s]",
+            "--progress-template", "download:[%(progress._percent_str)s]",
         ]
     )
-
     # --- 🟢 منطق التحميل والتعامل الذكي (Async الكامل - الحل الجذري) ---
     if not is_local_file:
         print(f"🌐 رابط ويب، جاري التحميل بنظام Async Subprocess...")
