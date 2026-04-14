@@ -121,20 +121,21 @@ const submitTask = async () => {
   }
 };
 
-onMounted(() => {
-  // 1. تنظيف أي قنوات قديمة عالقة في الذاكرة قبل بدء أي اتصال جديد
-  supabaseClient.removeAllChannels(); 
+onMounted(async () => { // أضفنا async هنا لضمان ترتيب العمليات
+  // 1. مسح شامل لأي قنوات قديمة عالقة (الأمان أولاً)
+  await supabaseClient.removeAllChannels(); 
 
-  // 2. تحميل البيانات الأولية
-  fetchTasks();
+  // 2. تحميل البيانات الأولية (تأكد أن البيانات تظهر قبل بدء المراقبة)
+  await fetchTasks();
 
-  // 3. إعداد القناة اللحظية
+  // 3. إعداد القناة اللحظية (الـ Realtime)
   const channel = supabaseClient
     .channel('tasks-monitor')
     .on(
       'postgres_changes', 
       { event: '*', schema: 'public', table: 'download_tasks' }, 
       (payload) => {
+        // منطق التحديث (Insert/Update/Delete)
         if (payload.eventType === 'INSERT') {
           activeTasks.value.unshift(payload.new);
         } else if (payload.eventType === 'UPDATE') {
@@ -148,12 +149,17 @@ onMounted(() => {
       }
     );
 
-  // السطر الحاسم
-  channel.subscribe();
+  // 4. الاشتراك الرسمي
+  channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+          console.log('✅ الاتصال اللحظي يعمل بنجاح وبدون تكرار');
+      }
+  });
 });
 
-onUnmounted(() => {
-  // تنظيف القنوات عند مغادرة الصفحة
-  supabaseClient.removeAllChannels();
+onUnmounted(async () => {
+  // تنظيف القنوات عند مغادرة الصفحة يضمن عدم بقاء اتصال "شبح" في الخلفية
+  await supabaseClient.removeAllChannels();
 });
+
 </script>

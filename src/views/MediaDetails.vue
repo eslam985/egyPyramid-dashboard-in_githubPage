@@ -233,16 +233,18 @@ const selectedEpisodeId = ref(null);
 const props = defineProps(['search', 'id']);
 const isSaving = ref(false); // أضف هذا المتغير
 
-let mediaChannel = null; // تعريف المتغير في الأعلى
+let mediaChannel = null;
 
-onMounted(() => {
-    loadMedia();
+onMounted(async () => { // أضفنا async هنا
+    // 1. تحميل البيانات
+    await loadMedia();
 
-    // تنظيف أي قنوات قديمة قبل البدء لضمان عدم تكرار الـ Callbacks
-    supabaseClient.removeAllChannels(); 
+    // 2. مسح شامل للقنوات القديمة لضمان عدم حدوث تضارب (Conflict)
+    await supabaseClient.removeAllChannels(); 
 
+    // 3. إنشاء القناة الجديدة
     mediaChannel = supabaseClient
-        .channel('media-details-channel') // اسم مميز
+        .channel('media-details-channel')
         .on('postgres_changes', {
             event: 'UPDATE',
             schema: 'public',
@@ -253,12 +255,14 @@ onMounted(() => {
             loadMedia();
         });
 
+    // 4. الاشتراك
     mediaChannel.subscribe();
 });
 
-onUnmounted(() => {
+onUnmounted(async () => {
     if (mediaChannel) {
-        supabaseClient.removeChannel(mediaChannel);
+        // حذف القناة المحددة عند مغادرة الصفحة
+        await supabaseClient.removeChannel(mediaChannel);
     }
 });
 
