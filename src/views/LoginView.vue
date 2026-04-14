@@ -27,22 +27,37 @@
 </template>
 
 <script>
-import api from '../services/api';
+// استيراد عميل سوبابيز الذي قمت بإعداده مسبقاً
+import { supabase } from '../services/supabase';
+
 export default {
-    data() { return { email: '', password: '', loading: false }; },
+    data() { 
+        return { 
+            email: '', 
+            password: '', 
+            loading: false 
+        }; 
+    },
     methods: {
         async handleLogin() {
             this.loading = true;
-            const formData = new URLSearchParams();
-            formData.append('username', this.email);
-            formData.append('password', this.password);
 
             try {
-                const res = await api.post('/login', formData);
-                localStorage.setItem('user_token', res.data.access_token);
+                // تسجيل الدخول المباشر عبر سوبابيز بدون الحاجة لسيرفر وسيط
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: this.email,
+                    password: this.password,
+                });
+
+                if (error) throw error;
+
+                // سوبابيز تخزن التوكن تلقائياً في الـ LocalStorage
+                // ولكن إذا كان كودك القديم يعتمد على 'user_token' يدوياً:
+                localStorage.setItem('user_token', data.session.access_token);
+                
                 this.$router.push('/');
             } catch (e) {
-                alert('خطأ: بيانات الدخول غير صحيحة أو السيرفر لا يستجيب');
+                alert('خطأ: ' + (e.message || 'بيانات الدخول غير صحيحة'));
             } finally {
                 this.loading = false;
             }
