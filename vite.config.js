@@ -3,18 +3,13 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  // ✅ تغيير الـ base ليتطابق مع اسم المستودع على جيتهاب
-  // افترضنا أن اسم المستودع هو egyPyramid-dashboard
-  base: '/egyPyramid-dashboard/', 
-  
+  base: '/egyPyramid-dashboard-in_githubPage/', // تأكد أن الاسم يطابق تماماً اسم المستودع
   plugins: [vue(), tailwindcss()],
-  
   build: {
     outDir: 'dist', 
     emptyOutDir: true,
-    // تحسين البناء لتقليل الحجم
-    minify: 'terser',
+    // ✅ احذف سطر terser أو غيره لـ 'esbuild' وهو الافتراضي
+    minify: 'esbuild', 
     sourcemap: false
   }
-  // ❌ تم حذف قسم server و proxy لأنهما لا يعملان في البيئة المستضافة (Static)
 })
