@@ -136,7 +136,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
-import api from '../services/api';
+import { supabaseClient } from '../services/supabase'; // ✅ أضف هذا
 import { notifySuccess, notifyError, confirmAction } from '../utils/alerts';
 
 const tables = ref([]);
@@ -168,22 +168,10 @@ const formColumns = computed(() => {
 });
 
 onMounted(async () => {
-  try {
-    const res = await api.get('/db/tables');
-
-    // التحقق من أن البيانات هي مصفوفة (Array) وليست نص HTML
-    if (Array.isArray(res.data)) {
-      tables.value = res.data;
-      if (tables.value.length > 0) {
-        selectTable(tables.value[0]);
-      }
-    } else {
-      console.error('API returned non-array data:', res.data);
-      notifyError('فشل في جلب قائمة الجداول: استجابة غير صالحة من السيرفر');
-    }
-  } catch (e) {
-    console.error('Failed to fetch tables:', e);
-    notifyError('فشل في جلب قائمة الجداول: تأكد من تشغيل الباك-إند');
+  // بدلاً من api.get('/db/tables')
+  tables.value = ['medias', 'episodes', 'links', 'genres', 'seasons', 'media_genres'];
+  if (tables.value.length > 0) {
+    selectTable(tables.value[0]);
   }
 });
 
@@ -197,12 +185,22 @@ const loadTableData = async () => {
   if (!activeTable.value) return;
   loading.value = true;
   try {
-    const res = await api.get(`/db/${activeTable.value}`, {
-      params: { page: page.value, limit }
-    });
-    data.value = res.data.data;
-    total.value = res.data.total;
+    // حساب المدى (Pagination)
+    const from = (page.value - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data: resData, error, count } = await supabaseClient
+      .from(activeTable.value)
+      .select('*', { count: 'exact' })
+      .range(from, to)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    data.value = resData;
+    total.value = count;
   } catch (e) {
+    console.error(e);
     notifyError(`فشل في جلب بيانات جدول ${activeTable.value}`);
   } finally {
     loading.value = false;
@@ -248,23 +246,31 @@ const openEditModal = (row) => {
 
 const saveRow = async () => {
   try {
-    if (isEdit.value) {
-      const id = formData.value.id;
-      const cleanData = { ...formData.value };
-      delete cleanData.id;
-      delete cleanData.created_at;
-      delete cleanData.updated_at;
+    const cleanData = { ...formData.value };
+    // تنظيف البيانات من الحقول التلقائية
+    delete cleanData.created_at;
+    delete cleanData.updated_at;
 
-      await api.post(`/db/${activeTable.value}/update/${id}`, cleanData);
+    if (isEdit.value) {
+      const id = cleanData.id;
+      delete cleanData.id;
+      const { error } = await supabaseClient
+        .from(activeTable.value)
+        .update(cleanData)
+        .eq('id', id);
+      if (error) throw error;
       notifySuccess('تم تحديث السجل بنجاح');
     } else {
-      await api.post(`/db/${activeTable.value}/insert`, formData.value);
+      const { error } = await supabaseClient
+        .from(activeTable.value)
+        .insert([cleanData]);
+      if (error) throw error;
       notifySuccess('تم إضافة السجل بنجاح');
     }
     showModal.value = false;
     loadTableData();
   } catch (e) {
-    notifyError(e.response?.data?.detail || 'فشل في حفظ البيانات');
+    notifyError(e.message || 'فشل في حفظ البيانات');
   }
 };
 
@@ -272,16 +278,17 @@ const deleteRow = async (row) => {
   const result = await confirmAction("هل أنت متأكد من حذف هذا السجل؟ لا يمكن التراجع عن هذه الخطوة.");
   if (result.isConfirmed) {
     try {
-      // معالجة الجداول التي لا تملك ID (مفاتيح مركبة)
+      let query = supabaseClient.from(activeTable.value).delete();
+      
       if (activeTable.value === 'media_genres') {
-        // في Supabase، الحذف بدون ID يحتاج eq لكل الأعمدة الأساسية
-        await api.post(`/db/${activeTable.value}/delete/composite`, {
-          media_id: row.media_id,
-          genre_id: row.genre_id
-        });
+        query = query.eq('media_id', row.media_id).eq('genre_id', row.genre_id);
       } else {
-        await api.post(`/db/${activeTable.value}/delete/${row.id}`);
+        query = query.eq('id', row.id);
       }
+
+      const { error } = await query;
+      if (error) throw error;
+
       notifySuccess('تم حذف السجل');
       loadTableData();
     } catch (e) {
