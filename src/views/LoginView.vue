@@ -28,7 +28,7 @@
 
 <script>
 // استيراد عميل سوبابيز الذي قمت بإعداده مسبقاً
-import { supabase } from '../services/supabase';
+import { supabaseClient } from '../services/supabase';
 
 export default {
     data() { 
@@ -44,7 +44,7 @@ export default {
 
             try {
                 // تسجيل الدخول المباشر عبر سوبابيز بدون الحاجة لسيرفر وسيط
-                const { data, error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
                     email: this.email,
                     password: this.password,
                 });

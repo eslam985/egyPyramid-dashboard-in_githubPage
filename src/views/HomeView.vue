@@ -85,7 +85,7 @@ import { supabaseClient } from '../services/supabase';
 
 const props = defineProps({
   search: {
-    type: String,
+    type: String, 
     default: ''
   }
 });
