@@ -341,15 +341,31 @@ const deleteLink = async (linkId) => {
     }
 };
 
-
 const saveMediaDetails = async () => {
+    if (!mediaData.value.id) return;
+    
     isSaving.value = true;
     try {
-        await supabaseClient.from('medias').update(mediaData.value).eq('id', route.params.id);
-        notifySuccess('تم تحديث بيانات العمل بنجاح');
+        // 1. تنقية البيانات: نرسل فقط الحقول الموجودة فعلياً في جدول medias
+        // نستثني 'episodes' وأي حقول علاقات أخرى
+        const { episodes, ...dataToUpdate } = mediaData.value;
+
+        // 2. التنفيذ الفعلي
+        const { error } = await supabaseClient
+            .from('medias')
+            .update(dataToUpdate)
+            .eq('id', route.params.id);
+
+        if (error) throw error;
+
+        notifySuccess('✅ تم تحديث بيانات العمل بنجاح في السيرفر');
+        
+        // 3. إعادة تحميل البيانات لضمان المزامنة
         await loadMedia();
+        
     } catch (e) {
-        notifyError(e.message || 'فشل في حفظ البيانات'); // ✅ سوبابيز تضع الخطأ في e.message    
+        console.error('Save Error:', e);
+        notifyError(e.message || 'فشل في حفظ البيانات - تأكد من صلاحيات قاعدة البيانات');
     } finally {
         isSaving.value = false;
     }
