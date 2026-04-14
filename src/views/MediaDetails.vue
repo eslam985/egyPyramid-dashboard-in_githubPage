@@ -217,13 +217,13 @@
 </style>
 
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue'; // أضفنا onUnmounted
+import { useRoute } from 'vue-router';
+import Swal from 'sweetalert2'; // أضف هذا السطر ليعمل التنبيه
+import { supabaseClient } from '../services/supabase';
 import MediaDetailsSkeleton from '../components/MediaDetailsSkeleton.vue';
 import { notifySuccess, notifyError, notifyLoading, confirmAction } from '../utils/alerts';
-import Swal from 'sweetalert2'; // تأكد أيضاً من إضافة هذا الاستيراد لاستخدامه في handleSyncClick و addNewEpisodeRow
-import { onUnmounted } from 'vue'; // أضفها مع الـ import اللي فوق
-import { supabaseClient } from '../services/supabase';
-import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+
 // احذف import api from '../services/api'
 const route = useRoute();
 const mediaData = ref({});
@@ -231,6 +231,7 @@ const links = ref([]);
 const showLinksModal = ref(false);
 const selectedEpisodeId = ref(null);
 const props = defineProps(['search', 'id']);
+const isSaving = ref(false); // أضف هذا المتغير
 
 onMounted(() => {
     loadMedia();
@@ -257,7 +258,6 @@ const loadMedia = async () => {
     try {
         const { data, error } = await supabaseClient.from('medias').select('*, episodes(*)').eq('id', route.params.id).single();
         if (!error) mediaData.value = data;
-        mediaData.value = response.data;
         // تم حذف الـ forEach هنا لمنع الضغط على سيرفر بلوجر
     } catch (e) { console.error(e); }
 };
@@ -267,20 +267,23 @@ const manageLinks = async (epId) => {
     selectedEpisodeId.value = epId;
     showLinksModal.value = true;
     const { data: resData } = await supabaseClient.from('links').select('*').eq('episode_id', epId);
-links.value = resData;
-    links.value = res.data.links || res.data;
+    links.value = resData;
 };
 
 const updateLink = async (link) => {
-    const params = new URLSearchParams();
-    params.append('server_name', link.server_name);
-    params.append('url', link.url);
-    await api.post(`/links/${link.id}/update`, params);
+    // تم حذف URLSearchParams لأن سوبابيز تتعامل مع JSON مباشرة
+    await supabaseClient
+        .from('links')
+        .update({ 
+            server_name: link.server_name, 
+            url: link.url 
+        })
+        .eq('id', link.id);
 };
 
 const addNewLink = async (epId) => {
-    await api.post(`/episodes/${epId}/add-link`);
-    manageLinks(epId); // تحديث القائمة
+    await supabaseClient.from('links').insert([{ episode_id: epId, server_name: 'New Server', url: '' }]);
+    manageLinks(epId); 
 };
 
 // --- منطق الحلقات ---
@@ -294,7 +297,7 @@ const addNewEpisodeRow = async () => {
     });
 
     if (epNum) {
-        await api.post(`/media/${route.params.id}/add-episode`, new URLSearchParams({ episode_number: epNum }));
+        await supabaseClient.from('episodes').insert([{ media_id: route.params.id, episode_number: epNum }]);
         notifySuccess('تمت إضافة الحلقة');
         loadMedia();
     }
@@ -312,32 +315,10 @@ const deleteEpisode = async (epId) => {
 const deleteLink = async (linkId) => {
     const result = await confirmAction("سيتم حذف رابط السيرفر نهائياً.");
     if (result.isConfirmed) {
-        await api.post(`/links/${linkId}/delete`);
+        await supabaseClient.from('links').delete().eq('id', linkId);
         links.value = links.value.filter(l => l.id !== linkId);
     }
 };
-
-const syncToBlogger = async (ep) => {
-    try {
-        notifyLoading('جاري المزامنة... يرجى الانتظار'); // استخدام دالة الـ loading
-
-        const res = await api.post(`/episodes/${ep.id}/sync`);
-
-        if (res.data.status === 'success') {
-            ep.is_synced = true;
-            notifySuccess(res.data.message || 'تم نشر الحلقة بنجاح!');
-        } else {
-            notifyError(res.data.error || 'حدث خطأ غير معروف أثناء النشر.');
-        }
-    } catch (e) {
-        console.error(e);
-        notifyError('فشل الاتصال بالسيرفر - تأكد من تشغيل الباك-إند.');
-    }
-};
-
-
-const isSaving = ref(false); // أضف هذا المتغير
-
 
 
 const saveMediaDetails = async () => {
@@ -347,29 +328,13 @@ const saveMediaDetails = async () => {
         notifySuccess('تم تحديث بيانات العمل بنجاح');
         await loadMedia();
     } catch (e) {
-        notifyError(e.response?.data?.detail || 'فشل في حفظ البيانات');
+       notifyError(e.message || 'فشل في حفظ البيانات'); // ✅ سوبابيز تضع الخطأ في e.message    
     } finally {
         isSaving.value = false;
     }
 };
 // داخل الـ Script في Vue
-const checkSyncStatus = async (ep) => {
-    const postId = ep.medias?.blogger_post_id;
-    if (!postId) return false; // لا يوجد مقال
 
-    try {
-        const res = await api.get(`/blogger/check-status/${postId}`);
-        if (res.data.status === 'not_found') {
-            await api.post(`/episodes/${ep.id}/reset-sync`);
-            ep.is_synced = false; // تحديث الواجهة
-            return false; // الحلقة غير موجودة
-        }
-        return true; // الحلقة موجودة
-    } catch (e) {
-        console.error("فحص الحالة فشل");
-        return false;
-    }
-};
 
 const handleSyncClick = async (ep) => {
     // إظهار تنبيه بسيط يشير إلى أننا نقوم بالفحص حالياً
@@ -400,6 +365,41 @@ const handleSyncClick = async (ep) => {
             text: 'هذه الحلقة تم العثور عليها مسبقاً على بلوجر.',
             confirmButtonText: 'حسناً'
         });
+    }
+};
+
+const syncToBlogger = async (ep) => {
+    try {
+        notifyLoading('جاري المزامنة... يرجى الانتظار'); // استخدام دالة الـ loading
+
+        const res = await api.post(`/episodes/${ep.id}/sync`);
+
+        if (res.data.status === 'success') {
+            ep.is_synced = true;
+            notifySuccess(res.data.message || 'تم نشر الحلقة بنجاح!');
+        } else {
+            notifyError(res.data.error || 'حدث خطأ غير معروف أثناء النشر.');
+        }
+    } catch (e) {
+        console.error(e);
+        notifyError('فشل الاتصال بالسيرفر - تأكد من تشغيل الباك-إند.');
+    }
+};
+const checkSyncStatus = async (ep) => {
+    const postId = ep.medias?.blogger_post_id;
+    if (!postId) return false; // لا يوجد مقال
+
+    try {
+        const res = await api.get(`/blogger/check-status/${postId}`);
+        if (res.data.status === 'not_found') {
+            await api.post(`/episodes/${ep.id}/reset-sync`);
+            ep.is_synced = false; // تحديث الواجهة
+            return false; // الحلقة غير موجودة
+        }
+        return true; // الحلقة موجودة
+    } catch (e) {
+        console.error("فحص الحالة فشل");
+        return false;
     }
 };
 </script>
