@@ -41,7 +41,7 @@
       </form>
       <div class="">
 
-        <a href="/egyPyramid-dashboard-in_githubPage"> EGY PYRMID</a>
+        <a href="https://eslam985.github.io/egyPyramid-dashboard-in_githubPage/#/"> EGY PYRMID</a>
 
       </div>
     </div>
