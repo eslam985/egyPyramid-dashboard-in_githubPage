@@ -39,10 +39,9 @@
           class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-r-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all focus:outline-none focus:border-primary focus:ring-4 focus:ring-blue-500/10">
 
       </form>
-      <div
-        class="font-bold max-w-50 text-3xl text-yellow-500 tracking-[-0.5px] whitespace-nowrap px-4 py-1 rounded-lg shadow-md bg-[linear-gradient(135deg,#8a8000_0,#000000_80%)]">
+      <div class="">
 
-        <a href="/"> EGY PYRMID</a>
+        <a href="/egyPyramid-dashboard-in_githubPage"> EGY PYRMID</a>
 
       </div>
     </div>
