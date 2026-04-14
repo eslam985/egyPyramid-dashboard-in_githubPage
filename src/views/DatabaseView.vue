@@ -1,5 +1,5 @@
 <template>
-  <div class="database-view p-6 max-w-350 mx-auto py-8 min-h-screen">
+  <div class="database-view p-6 max-w-450 mx-auto py-8 min-h-screen">
     <div class="flex flex-col md:flex-row gap-6">
       <!-- Sidebar Tables Selection -->
       <aside class="w-full md:w-64 flex-shrink-0">
@@ -42,7 +42,7 @@
           </div>
 
           <!-- Data Table -->
-          <div class="overflow-x-auto overflow-y-auto max-h-[70vh]">
+          <div class="overflow-x-auto overflow-y-auto max-h-[70vh] ">
             <table class="w-full text-right border-collapse">
               <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 sticky top-0 z-10">
                 <tr>
