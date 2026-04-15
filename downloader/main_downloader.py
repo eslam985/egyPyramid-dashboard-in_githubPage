@@ -735,7 +735,6 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         "--impersonate", "chrome",  # تفعيل محاكاة المتصفح باستخدام curl_cffi
         "-v",
         "--no-playlist",
-        "--proxy", "socks5://127.0.0.1:9050",
         "--geo-bypass", # محاولة تخطي الحظر الجغرافي
         "--user-agent",
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
@@ -761,11 +760,6 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
     # دعم إضافي لسيرفرات vidtube و cdn-tube
     if "vidtube" in url or "cdn-tube" in url:
         cmd.extend(["--extractor-args", "jwplayer:base-url=https://vidtube.one/"])
-
-    # إضافة الرابط والمخرجات النهائية
-    # إضافة الرابط والمخرجات النهائية مع ضمان دمج أفضل فيديو وأفضل صوت
-    # تحديد الجودة بذكاء: 1080p بحد أقصى 2GB، وإلا 720p
-    # تحديد الجودة بذكاء: 1080p بمعدل نقل بيانات منخفض، أو 720p كخيار آمن جداً
     cmd.extend(
         [
             "-f", 
