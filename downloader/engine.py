@@ -168,27 +168,35 @@ class ProgressStream:
 async def upload_to_telegram_only(file_path, display_name, episode_id=None):
     print(f"📤 رفع واستخراج رابط تليجرام المباشر: {display_name}")
 
-    # 1. جلب المفاتيح مباشرة من كولاب لضمان الوصول
+    # 1. جلب القيم من بيئة النظام (التي قمت بحقنها في الخلية السابقة)
+    t_id = os.environ.get('TELEGRAM_API_ID') or os.environ.get('API_ID')
+    t_hash = os.environ.get('TELEGRAM_API_HASH') or os.environ.get('API_HASH')
+    tele_string = os.environ.get('TELEGRAM_STRING_SESSION')
+
+    # 2. محاولة جلبها من userdata فقط إذا كانت مفقودة (كخيار احتياطي)
+    if not t_id or not t_hash or not tele_string:
+        try:
+            from google.colab import userdata
+            t_id = t_id or userdata.get('TELEGRAM_API_ID')
+            t_hash = t_hash or userdata.get('TELEGRAM_API_HASH')
+            tele_string = tele_string or userdata.get('TELEGRAM_STRING_SESSION')
+        except:
+            pass
+
+    # 3. التحقق النهائي وتحويل النوع
     try:
-        from google.colab import userdata
-        
-        # جلب القيم من Secrets
-        t_id = userdata.get('TELEGRAM_API_ID') # تأكد أن الاسم مطابق لما كتبته في السيكرتس
-        t_hash = userdata.get('TELEGRAM_API_HASH')
-        tele_string = userdata.get('TELEGRAM_STRING_SESSION')
-        
         f_api_id = int(t_id) if t_id else None
         f_api_hash = t_hash
     except Exception as e:
-        print(f"❌ خطأ في جلب البيانات من Secrets: {e}")
+        print(f"❌ خطأ في معالجة أرقام الـ ID: {e}")
         return None
 
     if not f_api_id or not f_api_hash:
-        print("❌ خطأ: مفاتيح Telegram (API_ID/HASH) مفقودة في الـ Secrets.")
+        print("❌ خطأ: مفاتيح Telegram مفقودة في النظام وفي الـ Secrets.")
         return None
 
     if not tele_string:
-        print("❌ خطأ قاتل: TELEGRAM_STRING_SESSION غير موجود في الـ Secrets!")
+        print("❌ خطأ قاتل: TELEGRAM_STRING_SESSION غير موجود!")
         return None
 
     # استكمال بقية الكود (الوحش يدخل الآن)...
