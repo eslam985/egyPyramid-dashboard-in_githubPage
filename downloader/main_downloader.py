@@ -769,8 +769,10 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
     cmd.extend(
         [
             "-f", 
-            # سنعطي الأولوية لـ 720p أولاً لضمان الحجم، ثم 480p، ثم 1080p كحل أخير إذا لم يوجد غيرها
-            "(bestvideo[height<=720]+bestaudio/best[height<=720]) / (bestvideo[height<=480]+bestaudio/best[height<=480]) / (bestvideo[height<=1080][filesize<1950M]+bestaudio/best[height<=1080][filesize<1950M]) / best",
+            # الشرط الجديد: ابحث عن أي جودة يكون البُعد الأصغر فيها (width أو height) لا يتعدى 720 أو 1080
+            "(bestvideo[width<=720][height<=1280]/bestvideo[height<=720][width<=1280]+bestaudio/best[width<=720][height<=1280]/best[height<=720][width<=1280]) / "
+            "(bestvideo[width<=1080][height<=1920][filesize<1950M]+bestaudio/best[width<=1080][height<=1920][filesize<1950M]) / "
+            "best",
             "--merge-output-format", "mp4",
             "--max-filesize", "1950M",
             "--post-overwrites",
