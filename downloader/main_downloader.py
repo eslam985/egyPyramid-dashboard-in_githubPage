@@ -1035,22 +1035,23 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
 
                 # ثانياً: أمر FFmpeg المطور
                 ffmpeg_cmd = (
-                    f'ffmpeg -y -i "{vid_path}" -i "{LOGO_FILE}" -filter_complex '
-                    f'"[0:v]setpts=0.99*PTS,scale=iw*1.05:-1,crop=iw/1.05:ih/1.05,eq=gamma=1.03:contrast=1.02[v_speed]; '
-                    # اللوجو النصي (أول 10 ثواني)
-                    f"[v_speed]drawtext=text='EGY PYRAMID':fontcolor=0xFFD700:fontsize=80:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,0,10)'[txt1]; "
-                    # النص العربي (منتصف الفيلم)
-                    f"[txt1]drawtext=text='{bidi_text}':fontfile=/content/arial.ttf:fontcolor=0xFFD700:fontsize=w/35:x=(w-text_w)/2:y=h-th-40:"
-                    f"enable='between(t,{mid_time},{mid_time+10})'[txt2]; "
-                    # سطر التحكم في شفافية اللوجو الصوري (1.0 تعني ظهور كامل بدون باهتان)
-                    f"[1:v]format=rgba,colorchannelmixer=aa=1.0[logo_bright]; "
-                    f"[txt2][logo_bright]overlay=W-w-20:20[outv]; "
-                    f'[0:a]atempo=1.0101[outa]" '
-                    f'-map "[outv]" -map "[outa]" '
-                    f"-r 23.976 "
-                    f"-c:v libx264 -preset superfast -crf 24 -maxrate 2.1M -bufsize 4.2M -pix_fmt yuv420p "
-                    f'-c:a aac -b:a 128k -ar 44100 "{disguised_file}"'
-                )
+        f'ffmpeg -y -i "{vid_path}" -i "{LOGO_FILE}" -filter_complex '
+        f'"[0:v]scale=iw*1.05:-1,crop=iw/1.05:ih/1.05,eq=gamma=1.05:contrast=1.03[v_final]; '
+        # اللوجو النصي (أول 10 ثواني)
+        f"[v_final]drawtext=text='EGY PYRAMID':fontcolor=0xFFD700:fontsize=80:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,0,10)'[txt1]; "
+        # النص العربي (منتصف الفيلم)
+        f"[txt1]drawtext=text='{bidi_text}':fontfile=/content/arial.ttf:fontcolor=0xFFD700:fontsize=w/35:x=(w-text_w)/2:y=h-th-40:"
+        f"enable='between(t,{mid_time},{mid_time+10})'[txt2]; "
+        # سطر التحكم في شفافية اللوجو الصوري
+        f"[1:v]format=rgba,colorchannelmixer=aa=1.0[logo_bright]; "
+        f"[txt2][logo_bright]overlay=W-w-20:20[outv]"
+        f'" ' # قفلنا الفلتر كومبلكس هنا
+        f'-map "[outv]" -map 0:a ' # سحبنا الصوت الأصلي (0:a) كما هو لضمان التزامن 100%
+        f"-r 23.976 "
+        f"-c:v libx264 -preset superfast -crf 24 -maxrate 2.1M -bufsize 4.2M -pix_fmt yuv420p "
+        f'-c:a aac -b:a 128k -ar 44100 "{disguised_file}"'
+    )
+
 
                 # تنفيذ الأمر (استخدام subprocess.run يضمن الانتظار حتى انتهاء التمويه)
                 subprocess.run(ffmpeg_cmd, shell=True, check=True)
