@@ -950,7 +950,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         # 1. جرد الفيديوهات المفكوكة
         # 1. جرد الفيديوهات بذكاء
         all_contents = os.listdir(extract_dir)
-        print(f"DEBUG: فحص المجلد {extract_dir} وجدنا فيه: {all_contents}")
+        # #print(f"DEBUG: فحص المجلد {extract_dir} وجدنا فيه: {all_contents}")
 
         videos = [
             os.path.join(extract_dir, f)
