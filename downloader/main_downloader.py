@@ -198,7 +198,6 @@ def save_to_supabase(
                                 break
 
                 if query and query.data:
-                    # ✅ وجدناه! خذ الـ ID
                     m_id = query.data[0]["id"]
 
                     # --- التعديل: قراءة البيانات "لحساب" المتغيرات وليس للتعديل ---
@@ -214,10 +213,11 @@ def save_to_supabase(
                         f"🛡️ [حماية]: تم العثور على '{c_title}' (ID: {m_id})، تم سحب البيانات للأرشفة دون تعديل."
                     )
                 else:
-                    # ✨ مش موجود خالص؟ إذن أنشئه "مرة واحدة فقط"
+                    # استخدام upsert لضمان أنه في حالة "السباق اللحظي" لا يحدث خطأ 23505
                     print(f"🆕 [إنشاء]: سجل جديد لـ '{c_title}'...")
-                    # هنا نستخدم insert وليس upsert ليكون أكثر أماناً
-                    new_media = supabase.table("medias").insert(media_payload).execute()
+                    new_media = supabase.table("medias").upsert(
+                        media_payload, on_conflict="title, year"
+                    ).execute()
                     if new_media.data:
                         m_id = new_media.data[0]["id"]
 
