@@ -753,10 +753,8 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         "infinite",
         "--hls-use-mpegts",
     ]
-
     # دمج هيدرز الخداع من الـ Cookbook
     cmd.extend(smart_headers)
-
     # دعم إضافي لسيرفرات vidtube و cdn-tube
     if "vidtube" in url or "cdn-tube" in url:
         cmd.extend(["--extractor-args", "jwplayer:base-url=https://vidtube.one/"])
