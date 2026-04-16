@@ -202,12 +202,12 @@ async def upload_to_telegram_only(file_path, display_name, episode_id=None):
     # استكمال بقية الكود (الوحش يدخل الآن)...
 
     # 3. الوحش يدخل الآن "In-Memory"
+    # 3. الوحش يدخل الآن "In-Memory" وبدون اسم ثابت لمنع التداخل
     async with Client(
-        "egy_pyramid_session",
+        name=":memory:",  # 👈 التعديل الجوهري هنا: استخدام الذاكرة كاسم للجلسة
         session_string=tele_string,
         api_id=f_api_id,
         api_hash=f_api_hash,
-        in_memory=True,
     ) as app:
 
         # 1. الرفع للمخزن (أول وجهة في القائمة)
