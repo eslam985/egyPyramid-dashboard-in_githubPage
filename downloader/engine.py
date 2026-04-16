@@ -259,8 +259,9 @@ async def upload_to_telegram_only(file_path, display_name, episode_id=None):
                                 return direct_link  # هذا السطر هو الذي سينقذ السيرفرات الخمسة
 
         except Exception as e:
-            print(f"❌ فشل في عملية التليجرام: {e}")
-            return None
+            # بنطبع التحذير وبنرجع None عشان السكريبت يروح للـ Parallel Upload فوراً
+            print(f"⚠️ تليجرام وقع بس الوحش مبيقفش.. مكملين للسيرفرات الخمسة: {e}")
+            return "failed_but_continue"
         finally:
             if tracker.pbar:
                 tracker.pbar.close()

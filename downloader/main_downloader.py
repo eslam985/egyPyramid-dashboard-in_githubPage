@@ -1265,15 +1265,13 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     telegram_direct = await upload_to_telegram_only(vid_path, episode_label, episode_id=e_id)
 
             except Exception as e:
-                print(f"❌ فشل رفع تليجرام: {e}")
+                print(f"⚠️ تنبيه: فشل رفع تليجرام ({e})، لكن الوحش مكمل للسيرفرات التانية...")
                 if e_id:
                     supabase.table("episodes").update(
                         {
-                            "status_message": "❌ فشل في مرحلة تليجرام",
-                            "download_speed": "Error",
+                            "status_message": "⚠️ تليجرام فشل - جاري الرفع للسيرفرات البديلة",
                         }
-                    ).eq("id", e_id).execute()
-                continue  # تخطي باقي المراحل لهذا الملف والانتقال للملف التالي
+                    ).eq("id", e_id).execute()# تخطي باقي المراحل لهذا الملف والانتقال للملف التالي
 
             # --- 5. الرفع المتوازي للرباعي (Voe + Dood + Tape + Lulu) عبر الأرشيف ---
             # --- 5. الرفع المتوازي الخماسي (VK محلي + الباقي ريموت) ---
