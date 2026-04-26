@@ -525,10 +525,10 @@ def get_smart_headers(url):
 # --- 1. إضافة دالة الصيد في أعلى ملف سكربت التحميل ---
 async def get_direct_link_via_playwright(embed_url):
     from playwright.async_api import async_playwright
-    
+
     # تحويل الرابط للمسار المطلوب
     target_url = embed_url.replace("embed-", "d/").replace(".html", "_h")
-    
+
     print(f"🔍 جاري محاكاة مستخدم حقيقي لصيد الرابط من: {target_url}")
 
     async with async_playwright() as p:
@@ -546,16 +546,20 @@ async def get_direct_link_via_playwright(embed_url):
             # 2. التعامل مع العداد التنازلي (لو موجود)
             # هننتظر الزرار يظهر حتى لو اتأخر 15 ثانية
             btn_selector = "a.btn-gradient.submit-btn"
-            
+
             print("⏳ ننتظر ظهور زر التحميل (قد يستغرق 10 ثوانٍ بسبب العداد)...")
             await page.wait_for_selector(btn_selector, state="visible", timeout=20000)
 
             # 3. استخراج الرابط
             direct_link = await page.get_attribute(btn_selector, "href")
-            
-            # تأكيد إضافي: لو الرابط عبارة عن "javascript:void(0)" أو "#" 
+
+            # تأكيد إضافي: لو الرابط عبارة عن "javascript:void(0)" أو "#"
             # ده معناه إنه بيحتاج "نقرة" لتوليده
-            if not direct_link or direct_link.startswith("#") or "javascript" in direct_link:
+            if (
+                not direct_link
+                or direct_link.startswith("#")
+                or "javascript" in direct_link
+            ):
                 print("🖱️ الرابط يحتاج لنقرة لتوليده، جاري النقر...")
                 await page.click(btn_selector)
                 # ننتظر ثانية لتحديث الرابط
@@ -563,7 +567,7 @@ async def get_direct_link_via_playwright(embed_url):
                 direct_link = await page.get_attribute(btn_selector, "href")
 
             await browser.close()
-            
+
             if direct_link and "http" in direct_link:
                 print(f"✅ تم صيد الكنز بنجاح: {direct_link[:60]}...")
                 return direct_link
@@ -638,13 +642,24 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
 
     # استخراج الاسم النظيف للبحث في TMDB (بدلاً من البحث بالاسم الكامل مع رقم الحلقة)
     # التعديل: إذا كان المدخل رابطاً، نمرره كما هو لـ get_movie_data ليتعامل معه
+    # 1. استخراج السنة من الاسم الأصلي (Task Name) لاستخدامها في البحث الدقيق
+    year_match = re.search(r"\b((?:19|20)\d{2})\b", original_task_name)
+    extracted_year = year_match.group(1) if year_match else None
+
     if "http" in original_task_name or original_task_name.startswith(("tt", "tmdb")):
         search_query_clean = original_task_name
     else:
+        # هنا get_clean_media_data ترجع الاسم بدون سنة
         search_query_clean, _, _, _ = get_clean_media_data(original_task_name)
 
-    print(f"🔎 البحث عن: {search_query_clean} ...")
+    print(
+        f"🔎 البحث عن: {search_query_clean} "
+        + (f"({extracted_year})" if extracted_year else "")
+        + " ..."
+    )
 
+    # 2. تعديل استدعاء get_movie_data ليدعم السنة (إذا كانت الدالة تدعم ذلك)
+    # ملاحظة: سنمرر السنة للدالة لضمان دقة البحث
     (
         tmdb_id_fetched,
         display_title_tmdb,
@@ -655,7 +670,9 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         meta_rating,
         meta_runtime,
         meta_year,
-    ) = get_movie_data(search_query_clean if search_query_clean else name)
+    ) = get_movie_data(
+        search_query_clean if search_query_clean else name, year=extracted_year
+    )
 
     # دمج الاسم المجلوب مع تفاصيل الحلقة من التاسك الأصلي
     display_title = display_title_tmdb if display_title_tmdb else original_task_name
@@ -674,9 +691,6 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
     clean_title_search, category_search, current_season_no, current_ep_no = (
         get_clean_media_data(display_title)
     )
-
-    is_batch = False  # سنحددها لاحقاً بعد التحميل أو الفحص
-
     # البحث الذكي عن الميديا (بالاسم المطابق أو المنظف)
     try:
         media_id = None
@@ -822,8 +836,10 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         "--add-header",
         "Accept-Language: en-US,en;q=0.9,ar;q=0.8",
         "--no-check-certificate",
+        "--retries",
+        "infinite",
         "--socket-timeout",
-        "60",
+        "120",
         "--concurrent-fragments",
         "10",
         "--file-access-retries",
@@ -877,15 +893,17 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         )
 
         # استبدل الجزء القديم بهذا
-        from tqdm.notebook import tqdm as tqdm_notebook # لضمان عملها بشكل تفاعلي في كولاب
+        from tqdm.notebook import (
+            tqdm as tqdm_notebook,
+        )  # لضمان عملها بشكل تفاعلي في كولاب
 
         pbar_dl = tqdm_notebook(
             total=100,
             desc=f"📥 جاري التحميل: {display_title[:20]}",
             unit="%",
-            bar_format="{l_bar}{bar}{r_bar}", # تنسيق نظيف بدون تعقيد
-            ascii=" █", # استبدال الهاشتاج بمربعات ناعمة
-            colour="green" # اختيار لون الشريط (يعمل في كولاب)
+            bar_format="{l_bar}{bar}{r_bar}",  # تنسيق نظيف بدون تعقيد
+            ascii=" █",  # استبدال الهاشتاج بمربعات ناعمة
+            colour="green",  # اختيار لون الشريط (يعمل في كولاب)
         )
 
         last_db_update = 0
@@ -902,12 +920,19 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             # لا تطبع السطر إذا كان يحتوي على نسبة مئوية (تحميل عادي)
             # واطبعه فقط إذا احتوى على كلمة ERROR أو Warning أو تعطل
             is_progress = re.search(r"\d+(?:\.\d+)?%", line_str)
-            
-            if not is_progress or "ERROR" in line_str.upper() or "WARNING" in line_str.upper():
-                # هنا بنطبع فقط لو مفيش نسبة مئوية (يعني مش تحميل) 
+
+            if (
+                not is_progress
+                or "ERROR" in line_str.upper()
+                or "WARNING" in line_str.upper()
+            ):
+                # هنا بنطبع فقط لو مفيش نسبة مئوية (يعني مش تحميل)
                 # أو لو السطر فيه تنبيه صريح بمشكلة
-                if any(word in line_str.upper() for word in ["ERROR", "WARNING", "FAILED", "HTTP ERROR"]):
-                     print(f"⚠️ ALERT_LOG: {line_str}")
+                if any(
+                    word in line_str.upper()
+                    for word in ["ERROR", "WARNING", "FAILED", "HTTP ERROR"]
+                ):
+                    print(f"⚠️ ALERT_LOG: {line_str}")
 
             # استخراج النسبة
             match = re.search(r"(\d+(?:\.\d+)?)%", line_str)

@@ -66,7 +66,7 @@ def is_mostly_english(text):
     return english_chars >= arabic_chars
 
 
-def get_movie_data(name):
+def get_movie_data(name, year=None):  # <--- أضفنا year هنا
     search_query = str(name).strip()
     original_input = search_query
 
@@ -133,18 +133,29 @@ def get_movie_data(name):
     try:
         # 1. استخراج السنة والاسم (فصل السنة للبحث فقط دون حذفها من الأصل)
         # إذا كان المدخل رابطاً، نتجنب استخراج السنة منه لأنه قد يحتوي على IDs طويلة تخدع الـ Regex
+        # استخراج السنة والاسم
         if is_url_or_id:
-            year = None
+            extracted_year = None
             query_for_search = search_query
         else:
-            year_match = re.search(r"(\d{4})", search_query)
-            year = year_match.group(1) if year_match else None
+            # المحاولة الأولى: لو في سنة مبعوتة للدالة من بره نستخدمها
+            if year:
+                extracted_year = str(year)
+            else:
+                # المحاولة الثانية: لو مفيش، نستخرجها من الاسم بالـ Regex
+                year_match = re.search(r"(\d{4})", search_query)
+                extracted_year = year_match.group(1) if year_match else None
+
+            # تنظيف الكويري من أي سنين عشان البحث في TMDB يكون دقيق بالاسم فقط
             query_for_search = (
                 re.sub(r"\d{4}", "", search_query)
                 .replace(":", "")
                 .replace("_", " ")
                 .strip()
             )
+
+        # الآن نعتمد السنة النهائية للبحث
+        final_year = extracted_year
 
         clean_query = search_query
 
@@ -165,7 +176,21 @@ def get_movie_data(name):
         if not tmdb_final_id:
             # نستخدم query_for_search هنا عشان محرك البحث ميتلخبطش بالسنة
             # الجديد: تحديد المسار بناءً على الكلمة المفتاحية في العنوان
-            if any(word in original_input for word in ["مسلسل", "موسم", "حلقة", "Series", "Season", "Episode", "TV", "tv", "season", "episode"]):
+            if any(
+                word in original_input
+                for word in [
+                    "مسلسل",
+                    "موسم",
+                    "حلقة",
+                    "Series",
+                    "Season",
+                    "Episode",
+                    "TV",
+                    "tv",
+                    "season",
+                    "episode",
+                ]
+            ):
                 search_path = "tv"
                 content_kind = "tv"
             else:
@@ -173,8 +198,8 @@ def get_movie_data(name):
                 content_kind = "movie"
 
             search_url = f"https://api.themoviedb.org/3/search/{search_path}?api_key={TMDB_API_KEY}&query={query_for_search}&language=ar"
-            if year:
-                search_url += f"&year={year}"
+            if final_year:  # <--- تأكد إنها بتستخدم السنة المختارة
+                search_url += f"&year={final_year}"
             res = requests.get(search_url).json()
             if res.get("results"):
                 # --- التعديل المنقذ: التأكد من تطابق الاسم لتجنب نتائج الأفلام العشوائية ---
@@ -182,10 +207,13 @@ def get_movie_data(name):
                 for r in res["results"]:
                     res_title = (r.get("name") or r.get("title") or "").lower()
                     # لو الاسم اللي راجع فيه كلمة من اللي باحثين عنها، نعتبره هو الصح
-                    if query_for_search.lower() in res_title or res_title in query_for_search.lower():
+                    if (
+                        query_for_search.lower() in res_title
+                        or res_title in query_for_search.lower()
+                    ):
                         best_match = r
                         break
-                
+
                 if best_match:
                     first_res = best_match
                     tmdb_date = (
@@ -194,23 +222,23 @@ def get_movie_data(name):
                         or "0000"
                     )
                     tmdb_year = tmdb_date[:4]
-                    
+
                     if not year or tmdb_year == year:
                         tmdb_final_id = first_res["id"]
                         # أهم سطر: نجبد نوع المحتوى بناءً على البحث (tv أو movie) وليس ما يقترحه TMDB
-                        content_kind = search_path 
+                        content_kind = search_path
                 else:
-                    print(f"⚠️ TMDB أعاد نتائج غير مطابقة للاسم: {query_for_search}. سيتم الانتقال للمرحلة الثالثة.")
+                    print(
+                        f"⚠️ TMDB أعاد نتائج غير مطابقة للاسم: {query_for_search}. سيتم الانتقال للمرحلة الثالثة."
+                    )
 
         # --- المرحلة الثانية: OMDb (لو TMDB فشل في السنة) ---
         # --- المرحلة الثانية: OMDb (لو TMDB فشل في السنة) ---
-        if not tmdb_final_id and year:
+        if not tmdb_final_id and final_year:
             print(f"⚠️ TMDB فشل بالسنة.. جاري فحص OMDb بالاسم والسنة: {year}")
             # لضمان أن البحث في OMDb نظيف تماماً من أي رموز
             omdb_query = query_for_search.replace(" ", "+")
-            omdb_url = (
-                f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&t={omdb_query}&y={year}"
-            )
+            omdb_url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&t={omdb_query}&y={final_year}"
             res_o = requests.get(omdb_url).json()
 
             if res_o.get("Response") == "True":
@@ -272,8 +300,8 @@ def get_movie_data(name):
             return (
                 None,
                 display_name,
-                None, 
-                None, 
+                None,
+                None,
                 "أفلام",
                 "PT01H30M",
                 "N/A",
@@ -345,7 +373,9 @@ def get_movie_data(name):
             # مدة الحلقة أو الفيلم
             # مدة الحلقة أو الفيلم
             runtime = en_data.get("runtime") or (
-                en_data.get("episode_run_time")[0] if en_data.get("episode_run_time") else None
+                en_data.get("episode_run_time")[0]
+                if en_data.get("episode_run_time")
+                else None
             )
             if runtime:
                 # تحديث الـ ISO Format بناءً على الدقائق الحقيقية
@@ -428,19 +458,18 @@ def upload_poster_to_cloudinary(image_url):
         }
         res = requests.post(cloudinary_api, data=payload).json()
         public_id = res.get("public_id")
-        
+
         if public_id:
             # f_webp: تجعل كلاود ناري يسلم الصورة بصيغة WebP مهما كان الأصل
             # q_auto:good: تعطي جودة ممتازة مع حجم صغير جداً
             transform = "c_fill,g_auto,w_300,h_450,q_auto:good,f_webp"
-            
+
             return f"https://res.cloudinary.com/{cloud_name}/image/upload/{transform}/v1/{public_id}.webp"
-            
+
         return image_url
     except Exception as e:
         print(f"⚠️ خطأ في رفع الصورة لكلاود ناري: {e}")
         return image_url
-
 
 
 def upload_to_vk_local(title, file_path):
@@ -460,7 +489,9 @@ def upload_to_vk_local(title, file_path):
         res_save = requests.get(api_url, params=params).json()
 
         if "response" not in res_save:
-            print(f"❌ فشل حجز مكان في VK: {res_save.get('error', {}).get('error_msg')}")
+            print(
+                f"❌ فشل حجز مكان في VK: {res_save.get('error', {}).get('error_msg')}"
+            )
             return None
 
         upload_url = res_save["response"]["upload_url"]
@@ -470,10 +501,10 @@ def upload_to_vk_local(title, file_path):
         # --- [ مرحلة الضخ السريع ] ---
         print(f"📡 جاري ضخ الفيديو لـ VK بنظام Stream (المسار المحلي)...")
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 files = {"video_file": (os.path.basename(file_path), f, "video/mp4")}
                 response = requests.post(upload_url, files=files, timeout=600)
-            
+
             if response.status_code != 200:
                 print(f"❌ فشل ضخ الملف لـ VK: Status {response.status_code}")
                 return None
@@ -657,7 +688,9 @@ async def upload_to_doodstream(api_key, identifier, file_name):
                         if result.get("file_code") == f_code:
                             raw_size = result.get("size", 0)
                             size_mb = float(raw_size) / (1024 * 1024)
-                            print(f"✅ DoodStream Success: الملف موجود وبدأ المعالجة ({size_mb:.2f} MB)")
+                            print(
+                                f"✅ DoodStream Success: الملف موجود وبدأ المعالجة ({size_mb:.2f} MB)"
+                            )
                             return f"https://playmogo.com/e/{f_code}"
 
                     # إذا فشل Info، جرب الـ Status التقليدي
@@ -669,7 +702,7 @@ async def upload_to_doodstream(api_key, identifier, file_name):
 
                         if check_data.get("status") == 200:
                             results = check_data.get("result", [])
-                            if results: # أي نتيجة ترجع للملف ده يعني السيرفر شافه
+                            if results:  # أي نتيجة ترجع للملف ده يعني السيرفر شافه
                                 print(f"✅ DoodStream Success (File Found in Check)!")
                                 return f"https://playmogo.com/e/{f_code}"
                     except:
@@ -743,12 +776,15 @@ async def upload_to_streamtape(login, key, identifier, file_name):
                         # التعديل: قنص المعرف الحقيقي (extid) بدلاً من معرف المهمة (id)
                         # 1. القنص الذكي للمعرف (من extid أو من الـ url مباشرة)
                         file_code = task_info.get("extid") or task_info.get("fileid")
-                        
+
                         if not file_code and task_info.get("url"):
                             try:
                                 # استخراج المعرف من الرابط في حالة عدم وجود extid
-                                file_code = task_info.get("url").split("/v/")[1].split("/")[0]
-                            except: pass
+                                file_code = (
+                                    task_info.get("url").split("/v/")[1].split("/")[0]
+                                )
+                            except:
+                                pass
 
                         # 2. إذا تم العثور على المعرف، المهمة اكتملت
                         if file_code:
@@ -756,7 +792,8 @@ async def upload_to_streamtape(login, key, identifier, file_name):
                             try:
                                 rename_url = f"https://api.streamtape.com/file/rename?login={login}&key={key}&file={file_code}&name={urllib.parse.quote(file_name)}"
                                 await client.get(rename_url)
-                            except: pass
+                            except:
+                                pass
 
                             print(f"✅ Streamtape Success! File ID: {file_code}")
                             return f"https://streamtape.com/e/{file_code}"
@@ -901,7 +938,7 @@ async def upload_to_mixdrop(file_path, email, key):
 def normalize_title(title):
     if not title:
         return ""
-    
+
     t = str(title).lower()
 
     # --- الخطوة الناقصة والضرورية ---
@@ -985,7 +1022,22 @@ def get_clean_media_data(raw_name):
         category = "tv"
         season_no = int(season_only_pattern.group(1))
         clean_title = re.split(r"(?:الموسم|موسم)\s*\d+", raw_name)[0]
-    elif any(word in raw_name for word in ["مسلسل", "موسم","الموسم", "حلقة", "Series", "Season", "Episode", "TV", "tv", "season", "episode"]):
+    elif any(
+        word in raw_name
+        for word in [
+            "مسلسل",
+            "موسم",
+            "الموسم",
+            "حلقة",
+            "Series",
+            "Season",
+            "Episode",
+            "TV",
+            "tv",
+            "season",
+            "episode",
+        ]
+    ):
         category = "tv"
         clean_title = raw_name
 
