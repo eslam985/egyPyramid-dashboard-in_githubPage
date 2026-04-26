@@ -455,8 +455,12 @@ SITES_COOKBOOK = {
         "Origin": "https://myvidplay.com/",
     },
     "lulustream": {
-        "Referer": "https://lulustream.com/",
-        "Origin": "https://lulustream.com/  ",
+        "Referer": "https://topcinemaa.com/",  # الخداع بأننا جايين من موقع الأفلام
+        "Origin": "https://topcinemaa.com",
+    },
+    "luluvdo": {
+        "Referer": "https://topcinemaa.com/",
+        "Origin": "https://topcinemaa.com",
     },
     "mixdrop": {
         "Referer": "https://mixdrop.top/",
@@ -473,10 +477,6 @@ SITES_COOKBOOK = {
     "huggingface": {
         "Referer": "https://huggingface.co/",
         "Origin": "https://huggingface.co/",
-    },
-    "luluvdo": {
-        "Referer": "https://luluvdo.com/",
-        "Origin": "https://luluvdo.com/",
     },
     "ok": {
         "Referer": "https://ok.ru",
@@ -758,6 +758,12 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
     ]
     # دمج هيدرز الخداع من الـ Cookbook
     cmd.extend(smart_headers)
+    # --- المكاااااان الصحيح للكود الجديد هنا ---
+    if "lulu" in url:
+        # بنجبره يستخدم الـ Referer بتاع موقع الأفلام عشان يفتح السيرفر
+        cmd.extend(["--referer", "https://topcinemaa.com/"])
+        # ملاحظة: شيل سطر الـ cookies لو شغال على Colab لأنه مش هيلاقي كروم هناك
+    # ------------------------------------------
     # دعم إضافي لسيرفرات vidtube و cdn-tube
     if "vidtube" in url or "cdn-tube" in url:
         cmd.extend(["--extractor-args", "jwplayer:base-url=https://vidtube.one/"])
