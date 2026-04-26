@@ -73,15 +73,20 @@ class PyrogramProgress:
 
     def update(self, current, total):
         if not self.pbar:
-            self.pbar = tqdm_custom(
+            from tqdm.auto import tqdm  # الأفضل لكولاب
+
+            # جوه الـ __init__ أو الـ update:
+            self.pbar = tqdm(
                 total=total,
                 desc=f"📤 {self.dest_info} {self.name}",
                 unit="B",
                 unit_scale=True,
-                mininterval=2.0,  # التعديل هنا: تحديث كل ثانيتين
+                ascii=" █",
+                colour="green",
             )
 
         self.pbar.update(current - self.pbar.n)
+        # ... باقي الكود كما هو ...
 
         # الحقيقة الصارمة: تحديث واحد فقط كل ثانيتين يكفي جداً
         now = time.time()
@@ -223,7 +228,7 @@ async def upload_to_telegram_only(file_path, display_name, episode_id=None):
                 caption=f"🎬 **{display_name}**\n✅ بواسطة **Egy Pyramid**",
                 progress=lambda c, t: tracker.update(c, t),
             )
-
+            tracker.close()  # 👈 ضرورية جداً هنا
             if sent_video:
                 print(f"🔄 جاري عمل Forward للبوت لاستخراج الرابط...")
                 # 2. عمل Forward لبوت الاستخراج
