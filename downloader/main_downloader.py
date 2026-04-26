@@ -893,9 +893,9 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 break
 
             line_str = line.decode().strip()
-            print(
-                f"DEBUG_LOG: {line_str}"
-            )  # السطر ده هيخليك تشوف الـ yt-dlp بيقول إيه بالظبط وهو بيفشل
+            # print(
+            #     f"DEBUG_LOG: {line_str}"
+            # )  # السطر ده هيخليك تشوف الـ yt-dlp بيقول إيه بالظبط وهو بيفشل
 
             # استخراج النسبة
             match = re.search(r"(\d+(?:\.\d+)?)%", line_str)
