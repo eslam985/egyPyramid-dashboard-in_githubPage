@@ -1595,6 +1595,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 # --- ⚡ بلوك النجاح (يجب أن يكون هنا وليس في الـ except) ⚡ ---
 
                 # 2. تحضير بيانات تليجرام من الذاكرة الحية
+                # 2. تحضير بيانات تليجرام من الذاكرة الحية (زي ما هي)
                 row_data_for_tg = {
                     "title": loop_display_title,
                     "story": meta_story if meta_story else "لا يوجد وصف متاح حالياً.",
@@ -1603,13 +1604,14 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     "year": meta_year,
                 }
 
-                # 3. إرسال تمبلت تليجرام
+                # 3. إرسال تمبلت تليجرام (التعديل هنا)
+                # بنبعت النوع الحقيقي اللي "الوحش" عرفه من TMDB أو من فحص الرابط
                 status = send_to_telegram(
                     row=row_data_for_tg,
-                    content_type="MOVIE" if "فيلم" in display_title else "SERIES",
+                    content_type=category_search,  # <--- استخدم المتغير ده بدل الشرط اليدوي
                     action_text="المشاهدة",
-                    post_url="https://egypyramid.vercel.app/",
-                    lang_val="مترجم / مدبلج",
+                    post_url="https://egypyramid.vercel.app/",  # يفضل وضع رابط المقال الفعلي لو متاح
+                    lang_val="لغة أصلية (مترجم)",
                 )
 
                 if status:

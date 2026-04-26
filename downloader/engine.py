@@ -169,17 +169,18 @@ async def upload_to_telegram_only(file_path, display_name, episode_id=None):
     print(f"📤 رفع واستخراج رابط تليجرام المباشر: {display_name}")
 
     # 1. جلب القيم من بيئة النظام (التي قمت بحقنها في الخلية السابقة)
-    t_id = os.environ.get('TELEGRAM_API_ID') or os.environ.get('API_ID')
-    t_hash = os.environ.get('TELEGRAM_API_HASH') or os.environ.get('API_HASH')
-    tele_string = os.environ.get('TELEGRAM_STRING_SESSION')
+    t_id = os.environ.get("TELEGRAM_API_ID") or os.environ.get("API_ID")
+    t_hash = os.environ.get("TELEGRAM_API_HASH") or os.environ.get("API_HASH")
+    tele_string = os.environ.get("TELEGRAM_STRING_SESSION")
 
     # 2. محاولة جلبها من userdata فقط إذا كانت مفقودة (كخيار احتياطي)
     if not t_id or not t_hash or not tele_string:
         try:
             from google.colab import userdata
-            t_id = t_id or userdata.get('TELEGRAM_API_ID')
-            t_hash = t_hash or userdata.get('TELEGRAM_API_HASH')
-            tele_string = tele_string or userdata.get('TELEGRAM_STRING_SESSION')
+
+            t_id = t_id or userdata.get("TELEGRAM_API_ID")
+            t_hash = t_hash or userdata.get("TELEGRAM_API_HASH")
+            tele_string = tele_string or userdata.get("TELEGRAM_STRING_SESSION")
         except:
             pass
 
@@ -338,16 +339,27 @@ def generate_facebook_template(row, human_date, content_type, action_text, lang_
     # 1. إزالة النجوم (Markdown)
     clean_title_no_stars = clean_title.replace("*", "")
 
-    # 1. ذكاء تحديد النوع (فيلم أم مسلسل)
+    # --- ذكاء تحديد النوع (المطور) ---
     all_text_to_check = (raw_title + " " + str(row.get("labels", ""))).lower()
-    is_movie = (
-        "فيلم" in all_text_to_check
-        or "movie" in all_text_to_check
-        or content_type == "MOVIE"
+
+    # 1. التحقق من الـ labels القادمة من TMDB (الأكثر دقة)
+    # عادة TMDB يضع "أفلام" أو "TV Series"
+    is_movie_label = any(
+        word in all_text_to_check for word in ["فيلم", "أفلام", "movie"]
     )
 
-    # تصحيح النوع لو العنوان فيه كلمة "مسلسل" بشكل صريح
-    if "مسلسل" in all_text_to_check or "series" in all_text_to_check:
+    # 2. التحقق من content_type الممرر من سكرابيت التحميل
+    # (نحولها لـ lower للتأكد من المطابقة)
+    is_movie_type = str(content_type).lower() == "movie"
+
+    # المنطق النهائي: هو فيلم إذا وجدنا كلمة فيلم OR إذا كان النوع القادم من المحرك "movie"
+    # بشرط ألا يحتوي العنوان على كلمة "مسلسل" أو "حلقة"
+    is_movie = is_movie_label or is_movie_type
+
+    if any(
+        word in all_text_to_check
+        for word in ["مسلسل", "حلقة", "موسم", "series", "episode"]
+    ):
         is_movie = False
 
     type_label = "🎞️ فيلم" if is_movie else "🌟 مسلسل"
