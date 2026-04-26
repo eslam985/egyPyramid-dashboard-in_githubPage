@@ -215,9 +215,11 @@ def save_to_supabase(
                 else:
                     # استخدام upsert لضمان أنه في حالة "السباق اللحظي" لا يحدث خطأ 23505
                     print(f"🆕 [إنشاء]: سجل جديد لـ '{c_title}'...")
-                    new_media = supabase.table("medias").upsert(
-                        media_payload, on_conflict="title, year"
-                    ).execute()
+                    new_media = (
+                        supabase.table("medias")
+                        .upsert(media_payload, on_conflict="title, year")
+                        .execute()
+                    )
                     if new_media.data:
                         m_id = new_media.data[0]["id"]
 
@@ -732,10 +734,11 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
     # 2. بناء أمر الوحش الموحد لضمان تجاوز الحماية في كل الحالات
     cmd = [
         "yt-dlp",
-        "--impersonate", "chrome",  # تفعيل محاكاة المتصفح باستخدام curl_cffi
+        "--impersonate",
+        "chrome",  # تفعيل محاكاة المتصفح باستخدام curl_cffi
         "-v",
         "--no-playlist",
-        "--geo-bypass", # محاولة تخطي الحظر الجغرافي
+        "--geo-bypass",  # محاولة تخطي الحظر الجغرافي
         "--user-agent",
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
         "--add-header",
@@ -760,13 +763,15 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         cmd.extend(["--extractor-args", "jwplayer:base-url=https://vidtube.one/"])
     cmd.extend(
         [
-            "-f", 
+            "-f",
             # الشرط الجديد: ابحث عن أي جودة يكون البُعد الأصغر فيها (width أو height) لا يتعدى 720 أو 1080
             "(bestvideo[width<=720][height<=1280]/bestvideo[height<=720][width<=1280]+bestaudio/best[width<=720][height<=1280]/best[height<=720][width<=1280]) / "
             "(bestvideo[width<=1080][height<=1920][filesize<1950M]+bestaudio/best[width<=1080][height<=1920][filesize<1950M]) / "
             "best",
-            "--merge-output-format", "mp4",
-            "--max-filesize", "1950M",
+            "--merge-output-format",
+            "mp4",
+            "--max-filesize",
+            "1950M",
             "--post-overwrites",
             "--no-check-certificate",  # زيادة أمان للروابط المحمية
             "--max-filesize",
@@ -806,7 +811,9 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 break
 
             line_str = line.decode().strip()
-            ## print(f"DEBUG_LOG: {line_str}")      # السطر ده هيخليك تشوف الـ yt-dlp بيقول إيه بالظبط وهو بيفشل
+            print(
+                f"DEBUG_LOG: {line_str}"
+            )  # السطر ده هيخليك تشوف الـ yt-dlp بيقول إيه بالظبط وهو بيفشل
 
             # استخراج النسبة
             match = re.search(r"(\d+(?:\.\d+)?)%", line_str)
@@ -1035,22 +1042,21 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
 
                 # ثانياً: أمر FFmpeg المطور
                 ffmpeg_cmd = (
-        f'ffmpeg -y -i "{vid_path}" -i "{LOGO_FILE}" -filter_complex '
-        f'"[0:v]scale=iw*1.05:-1,crop=iw/1.05:ih/1.05,eq=gamma=1.05:contrast=1.03[v_final]; '
-        # اللوجو النصي (أول 10 ثواني)
-        f"[v_final]drawtext=text='EGY PYRAMID':fontcolor=0xFFD700:fontsize=80:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,0,10)'[txt1]; "
-        # النص العربي (منتصف الفيلم)
-        f"[txt1]drawtext=text='{bidi_text}':fontfile=/content/arial.ttf:fontcolor=0xFFD700:fontsize=w/35:x=(w-text_w)/2:y=h-th-40:"
-        f"enable='between(t,{mid_time},{mid_time+10})'[txt2]; "
-        # سطر التحكم في شفافية اللوجو الصوري
-        f"[1:v]format=rgba,colorchannelmixer=aa=1.0[logo_bright]; "
-        f"[txt2][logo_bright]overlay=W-w-20:20[outv]"
-        f'" ' # قفلنا الفلتر كومبلكس هنا
-        f'-map "[outv]" -map 0:a ' # سحبنا الصوت الأصلي (0:a) كما هو لضمان التزامن 100%
-        f"-c:v libx264 -preset superfast -crf 24 -maxrate 2.1M -bufsize 4.2M -pix_fmt yuv420p "
-        f'-c:a aac -b:a 128k -ar 44100 "{disguised_file}"'
-    )
-
+                    f'ffmpeg -y -i "{vid_path}" -i "{LOGO_FILE}" -filter_complex '
+                    f'"[0:v]scale=iw*1.05:-1,crop=iw/1.05:ih/1.05,eq=gamma=1.05:contrast=1.03[v_final]; '
+                    # اللوجو النصي (أول 10 ثواني)
+                    f"[v_final]drawtext=text='EGY PYRAMID':fontcolor=0xFFD700:fontsize=80:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,0,10)'[txt1]; "
+                    # النص العربي (منتصف الفيلم)
+                    f"[txt1]drawtext=text='{bidi_text}':fontfile=/content/arial.ttf:fontcolor=0xFFD700:fontsize=w/35:x=(w-text_w)/2:y=h-th-40:"
+                    f"enable='between(t,{mid_time},{mid_time+10})'[txt2]; "
+                    # سطر التحكم في شفافية اللوجو الصوري
+                    f"[1:v]format=rgba,colorchannelmixer=aa=1.0[logo_bright]; "
+                    f"[txt2][logo_bright]overlay=W-w-20:20[outv]"
+                    f'" '  # قفلنا الفلتر كومبلكس هنا
+                    f'-map "[outv]" -map 0:a '  # سحبنا الصوت الأصلي (0:a) كما هو لضمان التزامن 100%
+                    f"-c:v libx264 -preset superfast -crf 24 -maxrate 2.1M -bufsize 4.2M -pix_fmt yuv420p "
+                    f'-c:a aac -b:a 128k -ar 44100 "{disguised_file}"'
+                )
 
                 # تنفيذ الأمر (استخدام subprocess.run يضمن الانتظار حتى انتهاء التمويه)
                 subprocess.run(ffmpeg_cmd, shell=True, check=True)
@@ -1154,7 +1160,9 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             episode_label = (
                 f"{loop_display_title}" if len(videos) == 1 else f"{loop_display_title}"
             )
-            identifier = f"egy-pyr-{media_id}-{e_id}-{idx}".replace("_", "-").replace(" ", "-")
+            identifier = f"egy-pyr-{media_id}-{e_id}-{idx}".replace("_", "-").replace(
+                " ", "-"
+            )
             # --- تعريف مفاتيح السيرفرات (يجب أن تكون هنا داخل اللوب أو الدالة) ---
 
             # 3. الرفع للأرشيف (بالاسم النظيف)
@@ -1221,7 +1229,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 print(f"✅ تم ربط الرابط المباشر في سوبابيز: {direct_download_url}")
             except Exception as e:
                 print(f"❌ خطأ أرشيف: {e}")
-                
+
             telegram_direct = None  # تعريف أولي لضمان عدم حدوث NameError
             # 4. الرفع لتليجرام (بالاسم النظيف) مع حماية كاملة
             try:
@@ -1262,16 +1270,22 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 else:
                     # رفع الملف ككتلة واحدة إذا كان أصغر من 1.9 جيجا
                     # رفع الملف واستقبال الرابط المباشر في المتغير المطلوب
-                    telegram_direct = await upload_to_telegram_only(vid_path, episode_label, episode_id=e_id)
+                    telegram_direct = await upload_to_telegram_only(
+                        vid_path, episode_label, episode_id=e_id
+                    )
 
             except Exception as e:
-                print(f"⚠️ تنبيه: فشل رفع تليجرام ({e})، لكن الوحش مكمل للسيرفرات التانية...")
+                print(
+                    f"⚠️ تنبيه: فشل رفع تليجرام ({e})، لكن الوحش مكمل للسيرفرات التانية..."
+                )
                 if e_id:
                     supabase.table("episodes").update(
                         {
                             "status_message": "⚠️ تليجرام فشل - جاري الرفع للسيرفرات البديلة",
                         }
-                    ).eq("id", e_id).execute()# تخطي باقي المراحل لهذا الملف والانتقال للملف التالي
+                    ).eq(
+                        "id", e_id
+                    ).execute()  # تخطي باقي المراحل لهذا الملف والانتقال للملف التالي
 
             # --- 5. الرفع المتوازي للرباعي (Voe + Dood + Tape + Lulu) عبر الأرشيف ---
             # --- 5. الرفع المتوازي الخماسي (VK محلي + الباقي ريموت) ---
@@ -1303,12 +1317,15 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     print(f"✅ المصدر المعتمد للرفع: Archive.org ({identifier})")
                 elif telegram_direct:
                     remote_source = telegram_direct
-                    print(f"⚠️ تحذير: الأرشيف معطل.. تم استخدام رابط Telegram المباشر كمصدر!")
+                    print(
+                        f"⚠️ تحذير: الأرشيف معطل.. تم استخدام رابط Telegram المباشر كمصدر!"
+                    )
                 else:
                     remote_source = None
-                    print("❌ خطأ قاتل: لا يوجد مصدر (أرشيف أو تليجرام) للرفع المتوازي!")
-                    
-                    
+                    print(
+                        "❌ خطأ قاتل: لا يوجد مصدر (أرشيف أو تليجرام) للرفع المتوازي!"
+                    )
+
                 await asyncio.sleep(10)
                 # 1. تحضير مهام الريموت باستخدام المصدر المتاح (أرشيف أو تليجرام)
                 if remote_source:
@@ -1322,17 +1339,21 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                         st_login, st_key, remote_source, final_file_name
                     )
                     await asyncio.sleep(30)
-                    task_lulu = upload_to_lulustream(lu_key, remote_source, final_file_name)
+                    task_lulu = upload_to_lulustream(
+                        lu_key, remote_source, final_file_name
+                    )
                 else:
                     # في حالة انعدام المصادر، نضع مهام وهمية تعيد None
-                    task_voe = task_dood = task_tape = task_lulu = asyncio.sleep(0, result=None)
+                    task_voe = task_dood = task_tape = task_lulu = asyncio.sleep(
+                        0, result=None
+                    )
 
                 # 2. تحضير مهمة VK (رفع محلي ثقيل لا يحتاج لرابط ريموت)
                 loop = asyncio.get_event_loop()
                 task_vk = loop.run_in_executor(
                     None, upload_to_vk_local, episode_label, vid_path
                 )
-                
+
                 # 3. إطلاق الصواريخ الخمسة معاً وانتظار الجميع
                 # الترتيب مهم جداً لاستلام النتائج بشكل صحيح
                 vk_result, file_id, d_url, s_url, lu_url = await asyncio.gather(

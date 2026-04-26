@@ -18,7 +18,6 @@ pinned: false
 [![Vue.js](https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D)](https://vuejs.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![Docker](https://img.shields.io/badge/Docker-2CA5E0?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Blogger](https://img.shields.io/badge/Blogger-FF5722?style=for-the-badge&logo=blogger&logoColor=white)](https://www.blogger.com/)
 [![Google Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/)
 
 ---
@@ -173,7 +172,6 @@ drwxrwxrwx 1 es es     0 Mar 30 11:46 venv
 - Python 3.9+
 - Node.js & npm (لتطوير الواجهة)
 - مشروع Supabase (يحتوي على الجداول: `download_tasks`, `episodes`, `links`, `medias`)
-- مدونة Blogger وبيانات اعتماد API
 - مفاتيح API لـ TMDB، OMDB، Gemini، Groq، Cloudinary، إلخ.
 
 ### التطوير المحلي
