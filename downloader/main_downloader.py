@@ -1314,17 +1314,22 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     unit_scale=True,
                     mininterval=3.0,  # تحديث كل 3 ثوانٍ فقط (مثالي للسرعات البطيئة في كولاب)
                     maxinterval=10.0,
-                    ascii=" #",  # استخدام رموز بسيطة لا تربك المتصفح
+                    ascii=" █",  # استبدال الهاشتاج بمربعات ناعمة
+                    colour="green",  # اختيار لون الشريط (يعمل في كولاب)
                 )
-                # استبدل سطر إنشاء ProgressStream بـ:
-                stream = ProgressStream(vid_path, pbar_archive, episode_id=e_id)
+                # التأكد أننا نفتح الملف المحلي الموجود في vid_path فعلياً
                 # التعديل: نضمن أن اسم الملف داخل الأرشيف هو اسم الفيلم وليس الرابط أو اسم عشوائي
                 # بدلاً من استخدام clean_name، سنستخدم نفس هيكلة الـ IDs لاسم الملف
                 final_file_name = f"vid__{media_id}_{e_id}_{idx}.mp4"
 
+                # استبدل بلوك الـ with open بهذا:
+                stream = ProgressStream(vid_path, pbar_archive, episode_id=e_id)
+
                 archive_upload(
                     identifier,
-                    files={final_file_name: stream},  # هنا السر!
+                    files={
+                        final_file_name: stream
+                    },  # نستخدم stream هنا لأنه مربوط بالعداد وبالملف
                     metadata={"title": episode_label, "mediatype": "movies"},
                     access_key=ARCHIVE_ACCESS_KEY,
                     secret_key=ARCHIVE_SECRET_KEY,
@@ -1432,8 +1437,9 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 # --- ⚡ التحول للحل البديل (Telegram Fallback) ⚡ ---
                 # نتحقق: هل الأرشيف نجح؟ (لو archive_url لا يحتوي على رابط صحيح، نستخدم تليجرام)
                 if archive_url and "archive.org" in archive_url:
-                    remote_source = identifier
-                    print(f"✅ المصدر المعتمد للرفع: Archive.org ({identifier})")
+                    # نستخدم الرابط المباشر الذي أنشأناه في الخطوة السابقة
+                    remote_source = direct_download_url 
+                    print(f"✅ المصدر المعتمد للرفع: {remote_source}")
                 elif telegram_direct:
                     remote_source = telegram_direct
                     print(
