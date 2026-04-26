@@ -876,12 +876,16 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
         )
 
-        pbar_dl = tqdm(
+        # استبدل الجزء القديم بهذا
+        from tqdm.notebook import tqdm as tqdm_notebook # لضمان عملها بشكل تفاعلي في كولاب
+
+        pbar_dl = tqdm_notebook(
             total=100,
             desc=f"📥 جاري التحميل: {display_title[:20]}",
             unit="%",
-            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
-            mininterval=1.0,
+            bar_format="{l_bar}{bar}{r_bar}", # تنسيق نظيف بدون تعقيد
+            ascii=" █", # استبدال الهاشتاج بمربعات ناعمة
+            colour="green" # اختيار لون الشريط (يعمل في كولاب)
         )
 
         last_db_update = 0
@@ -893,9 +897,17 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 break
 
             line_str = line.decode().strip()
-            # print(
-            #     f"DEBUG_LOG: {line_str}"
-            # )  # السطر ده هيخليك تشوف الـ yt-dlp بيقول إيه بالظبط وهو بيفشل
+
+            # كود الفلترة الذكي:
+            # لا تطبع السطر إذا كان يحتوي على نسبة مئوية (تحميل عادي)
+            # واطبعه فقط إذا احتوى على كلمة ERROR أو Warning أو تعطل
+            is_progress = re.search(r"\d+(?:\.\d+)?%", line_str)
+            
+            if not is_progress or "ERROR" in line_str.upper() or "WARNING" in line_str.upper():
+                # هنا بنطبع فقط لو مفيش نسبة مئوية (يعني مش تحميل) 
+                # أو لو السطر فيه تنبيه صريح بمشكلة
+                if any(word in line_str.upper() for word in ["ERROR", "WARNING", "FAILED", "HTTP ERROR"]):
+                     print(f"⚠️ ALERT_LOG: {line_str}")
 
             # استخراج النسبة
             match = re.search(r"(\d+(?:\.\d+)?)%", line_str)
