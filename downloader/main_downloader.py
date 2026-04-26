@@ -529,7 +529,7 @@ async def get_direct_link_via_playwright(embed_url):
     # تحويل الرابط للمسار المطلوب
     target_url = embed_url.replace("embed-", "d/").replace(".html", "_h")
     
-    log.info(f"🔍 جاري محاكاة مستخدم حقيقي لصيد الرابط من: {target_url}")
+    print(f"🔍 جاري محاكاة مستخدم حقيقي لصيد الرابط من: {target_url}")
 
     async with async_playwright() as p:
         # إعدادات المتصفح لتبدو كجهاز حقيقي
@@ -547,7 +547,7 @@ async def get_direct_link_via_playwright(embed_url):
             # هننتظر الزرار يظهر حتى لو اتأخر 15 ثانية
             btn_selector = "a.btn-gradient.submit-btn"
             
-            log.info("⏳ ننتظر ظهور زر التحميل (قد يستغرق 10 ثوانٍ بسبب العداد)...")
+            print("⏳ ننتظر ظهور زر التحميل (قد يستغرق 10 ثوانٍ بسبب العداد)...")
             await page.wait_for_selector(btn_selector, state="visible", timeout=20000)
 
             # 3. استخراج الرابط
@@ -556,7 +556,7 @@ async def get_direct_link_via_playwright(embed_url):
             # تأكيد إضافي: لو الرابط عبارة عن "javascript:void(0)" أو "#" 
             # ده معناه إنه بيحتاج "نقرة" لتوليده
             if not direct_link or direct_link.startswith("#") or "javascript" in direct_link:
-                log.info("🖱️ الرابط يحتاج لنقرة لتوليده، جاري النقر...")
+                print("🖱️ الرابط يحتاج لنقرة لتوليده، جاري النقر...")
                 await page.click(btn_selector)
                 # ننتظر ثانية لتحديث الرابط
                 await page.wait_for_timeout(2000)
@@ -565,14 +565,14 @@ async def get_direct_link_via_playwright(embed_url):
             await browser.close()
             
             if direct_link and "http" in direct_link:
-                log.info(f"✅ تم صيد الكنز بنجاح: {direct_link[:60]}...")
+                print(f"✅ تم صيد الكنز بنجاح: {direct_link[:60]}...")
                 return direct_link
             else:
-                log.error("❌ الرابط المستخرج غير صالح.")
+                print.error("❌ الرابط المستخرج غير صالح.")
                 return None
 
         except Exception as e:
-            log.error(f"❌ خطأ أثناء الصيد بالمتصفح: {str(e)}")
+            print.error(f"❌ خطأ أثناء الصيد بالمتصفح: {str(e)}")
             await browser.close()
             return None
 
@@ -792,16 +792,16 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
 
     # قبل جزء بناء الـ cmd مباشرة، أضف هذا الشرط المنقذ:
     if "vidtube.one" in url or "cdn-tube" in url:
-        log.info(
+        print(
             "🎯 تم اكتشاف رابط VidTube/Lulu.. جاري استخراج الرابط المباشر لتجنب الحماية..."
         )
         direct_link = await get_direct_link_via_playwright(url)
 
         if direct_link:
-            log.info(f"✅ تم صيد الرابط بنجاح! سيتم التحميل الآن.")
+            print(f"✅ تم صيد الرابط بنجاح! سيتم التحميل الآن.")
             url = direct_link  # استبدال الرابط القديم بالرابط المباشر الجديد
         else:
-            log.warning("⚠️ فشل الصيد، سنحاول بالرابط الأصلي (قد يفشل).")
+            print.warning("⚠️ فشل الصيد، سنحاول بالرابط الأصلي (قد يفشل).")
 
     # الآن يكمل الكود بناء الـ cmd بالرابط الجديد (url)
     smart_headers = get_smart_headers(url)
