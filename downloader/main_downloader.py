@@ -1437,20 +1437,22 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     ).eq("id", e_id).execute()
                 # --- ⚡ التحول للحل البديل (Telegram Fallback) ⚡ ---
                 # نتحقق: هل الأرشيف نجح؟ (لو archive_url لا يحتوي على رابط صحيح، نستخدم تليجرام)
-                if archive_url and "archive.org" in archive_url:
-                    # نستخدم الرابط المباشر الذي أنشأناه في الخطوة السابقة
-                    remote_source = direct_download_url 
-                    print(f"✅ المصدر المعتمد للرفع: {remote_source}")
+                                # تحديد مصدر الرفع عن بعد (Remote Source)
+                if archive_url and archive_url.startswith("https://archive.org/download/"):
+                    # لو الرابط كامل، بنشيل البادئة عشان نضمن عدم تكرارها لو احتجنا نركب أجزاء تانية
+                    clean_path = archive_url.replace("https://archive.org/download/", "")
+                    remote_source = f"https://archive.org/download/{clean_path}"
+                elif archive_url:
+                    # لو الرابط مش كامل (عبارة عن identifier بس)
+                    remote_source = f"https://archive.org/download/{archive_url}"
                 elif telegram_direct:
+                    # لو مفيش أرشيف بنستخدم تليجرام
                     remote_source = telegram_direct
-                    print(
-                        f"⚠️ تحذير: الأرشيف معطل.. تم استخدام رابط Telegram المباشر كمصدر!"
-                    )
+                    print(f"⚠️ تحذير: الأرشيف معطل.. تم استخدام رابط Telegram المباشر كمصدر!")
                 else:
                     remote_source = None
-                    print(
-                        "❌ خطأ قاتل: لا يوجد مصدر (أرشيف أو تليجرام) للرفع المتوازي!"
-                    )
+                    print("❌ خطأ قاتل: لا يوجد مصدر (أرشيف أو تليجرام) للرفع المتوازي!")
+
 
                 await asyncio.sleep(10)
                 # 1. تحضير مهام الريموت باستخدام المصدر المتاح (أرشيف أو تليجرام)

@@ -70,7 +70,7 @@ genre_map = {
     "Action": "أكشن",
     "Adventure": "مغامرة",
     "Animation": "رسوم متحركة",
-    "Comedy": "كوميدي",
+    "Comedy": "كوميديا",
     "Crime": "جريمة",
     "Documentary": "وثائقي",
     "Drama": "دراما",
