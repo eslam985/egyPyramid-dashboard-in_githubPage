@@ -1330,7 +1330,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 with open(vid_path, "rb") as f_data:
                     archive_upload(
                         identifier,
-                        files={final_file_name: f_data}, # الرفع من الملف الخام
+                        files={final_file_name: f_data},  # الرفع من الملف الخام
                         metadata={"title": episode_label, "mediatype": "movies"},
                         access_key=ARCHIVE_ACCESS_KEY,
                         secret_key=ARCHIVE_SECRET_KEY,
@@ -1436,23 +1436,33 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                         }
                     ).eq("id", e_id).execute()
                 # --- ⚡ التحول للحل البديل (Telegram Fallback) ⚡ ---
-                # نتحقق: هل الأرشيف نجح؟ (لو archive_url لا يحتوي على رابط صحيح، نستخدم تليجرام)
-                                # تحديد مصدر الرفع عن بعد (Remote Source)
-                if archive_url and archive_url.startswith("https://archive.org/download/"):
-                    # لو الرابط كامل، بنشيل البادئة عشان نضمن عدم تكرارها لو احتجنا نركب أجزاء تانية
-                    clean_path = archive_url.replace("https://archive.org/download/", "")
-                    remote_source = f"https://archive.org/download/{clean_path}"
-                elif archive_url:
-                    # لو الرابط مش كامل (عبارة عن identifier بس)
-                    remote_source = f"https://archive.org/download/{archive_url}"
-                elif telegram_direct:
-                    # لو مفيش أرشيف بنستخدم تليجرام
-                    remote_source = telegram_direct
-                    print(f"⚠️ تحذير: الأرشيف معطل.. تم استخدام رابط Telegram المباشر كمصدر!")
-                else:
-                    remote_source = None
-                    print("❌ خطأ قاتل: لا يوجد مصدر (أرشيف أو تليجرام) للرفع المتوازي!")
+                # 1. تحديد المصدر الأولي
+                temp_source = archive_url if archive_url else telegram_direct
 
+                # 2. تنظيف الرابط "القسري" - بيشيل أي تكرار مهما كان عدده
+                if temp_source and "archive.org/download/" in temp_source:
+                    # بنقص السلسلة وبناخد آخر جزء فقط بعد أي تكرار للرابط
+                    parts = temp_source.split("archive.org/download/")
+                    clean_id = parts[-1].lstrip(
+                        "/"
+                    )  # بناخد آخر جزء وبنظف أي سلاش في الأول
+                    remote_source = f"https://archive.org/download/{clean_id}"
+                else:
+                    remote_source = temp_source
+
+                print(f"📡 المصدر النهائي المعتمد: {remote_source}")
+
+                # 3. التعامل مع الحالات الاستثنائية والطباعة
+                if not remote_source:
+                    print(
+                        "❌ خطأ قاتل: لا يوجد مصدر (أرشيف أو تليجرام) للرفع المتوازي!"
+                    )
+                elif temp_source == telegram_direct and not archive_url:
+                    print(
+                        f"⚠️ تحذير: الأرشيف معطل.. تم استخدام رابط Telegram المباشر: {remote_source}"
+                    )
+                else:
+                    print(f"📡 المصدر النهائي المعتمد: {remote_source}")
 
                 await asyncio.sleep(10)
                 # 1. تحضير مهام الريموت باستخدام المصدر المتاح (أرشيف أو تليجرام)
