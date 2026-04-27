@@ -113,6 +113,11 @@ class PyrogramProgress:
             except:
                 pass
 
+    # الدالة اللي كانت ناقصة ومسببة المشكلة:
+    def close(self):
+        if self.pbar:
+            self.pbar.close()
+
 
 async def ensure_dependencies():
     print("🔍 جاري فحص الأدوات الأساسية...")
