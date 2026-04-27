@@ -234,50 +234,85 @@ def get_movie_data(name, year=None):  # <--- أضفنا year هنا
 
         # --- المرحلة الثانية: OMDb (لو TMDB فشل في السنة) ---
         # --- المرحلة الثانية: OMDb (لو TMDB فشل في السنة) ---
+        # --- المرحلة الثانية: OMDb (لو TMDB فشل في السنة) ---
         if not tmdb_final_id and final_year:
-            print(f"⚠️ TMDB فشل بالسنة.. جاري فحص OMDb بالاسم والسنة: {year}")
-            # لضمان أن البحث في OMDb نظيف تماماً من أي رموز
+            print(f"⚠️ TMDB فشل بالسنة.. جاري فحص OMDb بالاسم والسنة: {final_year}")
+
+            # 1. السطر الناقص: تنفيذ طلب البحث في OMDb
             omdb_query = query_for_search.replace(" ", "+")
             omdb_url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&t={omdb_query}&y={final_year}"
-            res_o = requests.get(omdb_url).json()
 
-            if res_o.get("Response") == "True":
-                omdb_title = res_o.get("Title", "").lower()
-                # فلتر القناص: التأكد أن الكلمة الأولى من بحثك موجودة في عنوان OMDb
-                search_first_word = clean_query.strip().split(" ")[0].lower()
+            try:
+                res_o = requests.get(omdb_url).json()  # هنا تم تعريف res_o
 
-                if search_first_word in omdb_title:
-                    raw_story = res_o.get("Plot", "")
-                    try:
-                        story = (
-                            translator.translate(raw_story)
-                            if raw_story != "N/A"
-                            else "لا يوجد وصف"
+                if res_o.get("Response") == "True":
+                    omdb_title = res_o.get("Title", "").lower()
+                    search_first_word = query_for_search.strip().split(" ")[0].lower()
+
+                    if search_first_word in omdb_title:
+                        # 1. جلب القصة (Story)
+                        raw_story = res_o.get("Plot", "")
+                        try:
+                            story = (
+                                translator.translate(raw_story)
+                                if raw_story != "N/A"
+                                else "لا يوجد وصف"
+                            )
+                        except:
+                            story = raw_story
+
+                        # 2. جلب التصنيفات (Genres) - من IMDb
+                        labels = res_o.get("Genre", "أفلام")
+                        if labels == "N/A":
+                            labels = "أفلام"
+
+                        # 3. جلب مدة العمل (Runtime) - من IMDb
+                        raw_runtime = res_o.get("Runtime", "N/A")
+                        runtime_str = "غير محدد"
+                        duration = "PT01H30M"
+
+                        if raw_runtime != "N/A":
+                            runtime_str = raw_runtime
+                            minutes_match = re.search(r"(\d+)", raw_runtime)
+                            if minutes_match:
+                                m = int(minutes_match.group(1))
+                                duration = f"PT{m//60:02d}H{m%60:02d}M"
+                                hours = m // 60
+                                mins = m % 60
+                                runtime_str = (
+                                    f"{hours} ساعة و {mins} دقيقة"
+                                    if hours > 0
+                                    else f"{m} دقيقة"
+                                )
+
+                        # 4. جلب التقييم وسنة العرض
+                        rating = res_o.get("imdbRating", "N/A")
+                        release_year = res_o.get("Year", final_year or "2026")
+
+                        # 5. معالجة البوستر
+                        omdb_poster = res_o.get("Poster")
+                        if omdb_poster and omdb_poster != "N/A":
+                            print(f"☁️ جاري رفع بوستر IMDb (عبر OMDb) لكلاود ناري...")
+                            omdb_poster = upload_poster_to_cloudinary(omdb_poster)
+
+                        return (
+                            res_o.get("imdbID"),
+                            res_o.get("Title"),
+                            story,
+                            omdb_poster,
+                            labels,
+                            duration,
+                            rating,
+                            runtime_str,
+                            release_year,
                         )
-                    except:
-                        story = raw_story
+                    else:
+                        print(
+                            f"🛑 رفض النتيجة: OMDb أعاد '{omdb_title}' وهي لا تطابق '{query_for_search}'"
+                        )
 
-                    # --- التعديل هنا: رفع بوستر OMDb قبل الخروج ---
-                    omdb_poster = res_o.get("Poster")
-                    if omdb_poster and omdb_poster != "N/A":
-                        print(f"☁️ جاري رفع بوستر OMDb لكلاود ناري...")
-                        omdb_poster = upload_poster_to_cloudinary(omdb_poster)
-
-                    return (
-                        res_o.get("imdbID"),  # ID
-                        res_o.get("Title"),  # Title
-                        story,  # Story
-                        omdb_poster,  # Poster المرفوع
-                        "أفلام",  # Labels
-                        "PT02H00M",  # Duration ISO
-                        res_o.get("imdbRating"),  # Rating
-                        res_o.get("Runtime"),  # Runtime String
-                        res_o.get("Year"),  # Year
-                    )
-                else:
-                    print(
-                        f"🛑 رفض النتيجة: OMDb أعاد '{omdb_title}' وهي لا تطابق '{clean_query}'"
-                    )
+            except Exception as e:
+                print(f"⚠️ خطأ أثناء الاتصال بـ OMDb: {e}")
 
         # --- المرحلة الثالثة: الصرامة المطلقة (بديل البحث المرن والـ AI) ---
         # --- المرحلة الثالثة: الصرامة المطلقة ---

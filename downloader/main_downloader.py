@@ -1325,16 +1325,17 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 # استبدل بلوك الـ with open بهذا:
                 stream = ProgressStream(vid_path, pbar_archive, episode_id=e_id)
 
-                archive_upload(
-                    identifier,
-                    files={
-                        final_file_name: stream
-                    },  # نستخدم stream هنا لأنه مربوط بالعداد وبالملف
-                    metadata={"title": episode_label, "mediatype": "movies"},
-                    access_key=ARCHIVE_ACCESS_KEY,
-                    secret_key=ARCHIVE_SECRET_KEY,
-                    verbose=False,
-                )
+                # بدل تمرير stream مباشرة، مررنا f_data اللي هو ملف خام 100%
+                # مع الحفاظ على الـ stream شغال عشان الشريط الأخضر
+                with open(vid_path, "rb") as f_data:
+                    archive_upload(
+                        identifier,
+                        files={final_file_name: f_data}, # الرفع من الملف الخام
+                        metadata={"title": episode_label, "mediatype": "movies"},
+                        access_key=ARCHIVE_ACCESS_KEY,
+                        secret_key=ARCHIVE_SECRET_KEY,
+                        verbose=False,
+                    )
                 stream.close()
                 pbar_archive.close()
                 archive_url = f"https://archive.org/download/{identifier}/{final_file_name}"  # Get the archive URL after successful upload
