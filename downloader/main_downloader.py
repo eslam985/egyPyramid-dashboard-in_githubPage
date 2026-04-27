@@ -1437,32 +1437,23 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     ).eq("id", e_id).execute()
                 # --- ⚡ التحول للحل البديل (Telegram Fallback) ⚡ ---
                 # 1. تحديد المصدر الأولي
-                temp_source = archive_url if archive_url else telegram_direct
-
-                # 2. تنظيف الرابط "القسري" - بيشيل أي تكرار مهما كان عدده
-                if temp_source and "archive.org/download/" in temp_source:
-                    # بنقص السلسلة وبناخد آخر جزء فقط بعد أي تكرار للرابط
-                    parts = temp_source.split("archive.org/download/")
-                    clean_id = parts[-1].lstrip(
-                        "/"
-                    )  # بناخد آخر جزء وبنظف أي سلاش في الأول
-                    remote_source = f"https://archive.org/download/{clean_id}"
+                # تحديد مصدر الرفع (نفس منطق النسخة المستقرة)
+                if archive_url and "archive.org" in archive_url:
+                    # بنبعت الـ identifier بس لأن دالات الرفع بتركب الرابط من عندها
+                    remote_source = identifier
+                    print(f"✅ المصدر المعتمد للرفع: Archive.org ({identifier})")
+                elif telegram_direct:
+                    remote_source = telegram_direct
+                    print(
+                        f"⚠️ تحذير: الأرشيف معطل.. تم استخدام رابط Telegram المباشر كمصدر!"
+                    )
                 else:
-                    remote_source = temp_source
-
-                print(f"📡 المصدر النهائي المعتمد: {remote_source}")
-
-                # 3. التعامل مع الحالات الاستثنائية والطباعة
-                if not remote_source:
+                    remote_source = None
                     print(
                         "❌ خطأ قاتل: لا يوجد مصدر (أرشيف أو تليجرام) للرفع المتوازي!"
                     )
-                elif temp_source == telegram_direct and not archive_url:
-                    print(
-                        f"⚠️ تحذير: الأرشيف معطل.. تم استخدام رابط Telegram المباشر: {remote_source}"
-                    )
-                else:
-                    print(f"📡 المصدر النهائي المعتمد: {remote_source}")
+                # طباعة للتأكد من قيمة المصدر قبل الإرسال
+                print(f"📡 القيمة المرسلة لمهام الرفع: {remote_source}")
 
                 await asyncio.sleep(10)
                 # 1. تحضير مهام الريموت باستخدام المصدر المتاح (أرشيف أو تليجرام)
