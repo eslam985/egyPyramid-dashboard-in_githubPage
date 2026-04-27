@@ -66,6 +66,29 @@ def is_mostly_english(text):
     return english_chars >= arabic_chars
 
 
+genre_map = {
+    "Action": "أكشن",
+    "Adventure": "مغامرة",
+    "Animation": "رسوم متحركة",
+    "Comedy": "كوميدي",
+    "Crime": "جريمة",
+    "Documentary": "وثائقي",
+    "Drama": "دراما",
+    "Family": "عائلي",
+    "Fantasy": "فانتازيا",
+    "History": "تاريخ",
+    "Horror": "رعب",
+    "Music": "موسيقى",
+    "Mystery": "غموض",
+    "Romance": "رومانسي",
+    "Science Fiction": "خيال علمي",
+    "TV Movie": "فيلم تلفزيوني",
+    "Thriller": "إثارة",
+    "War": "حرب",
+    "Western": "غرب أمريكي",
+}
+
+
 def get_movie_data(name, year=None):  # <--- أضفنا year هنا
     search_query = str(name).strip()
     original_input = search_query
@@ -261,10 +284,13 @@ def get_movie_data(name, year=None):  # <--- أضفنا year هنا
                         except:
                             story = raw_story
 
-                        # 2. جلب التصنيفات (Genres) - من IMDb
-                        labels = res_o.get("Genre", "أفلام")
-                        if labels == "N/A":
-                            labels = "أفلام"
+                        # 2. جلب التصنيفات (Genres) - مترجمة لتجنب مشاكل الـ Duplicate Key
+                        raw_genres = res_o.get("Genre", "أفلام").split(", ")
+                        # نستخدم القاموس للترجمة، وإذا لم يوجد نأخذ الكلمة كما هي
+                        translated_list = [
+                            genre_map.get(g.strip(), g.strip()) for g in raw_genres
+                        ]
+                        labels = ", ".join(translated_list)
 
                         # 3. جلب مدة العمل (Runtime) - من IMDb
                         raw_runtime = res_o.get("Runtime", "N/A")
@@ -285,8 +311,9 @@ def get_movie_data(name, year=None):  # <--- أضفنا year هنا
                                     else f"{m} دقيقة"
                                 )
 
-                        # 4. جلب التقييم وسنة العرض
-                        rating = res_o.get("imdbRating", "N/A")
+                        # 4. جلب التقييم وسنة العرض - ضمان تحويل التقييم لنص رقمي
+                        raw_rating = res_o.get("imdbRating", "0")
+                        rating = str(raw_rating) if raw_rating != "N/A" else "0.0"
                         release_year = res_o.get("Year", final_year or "2026")
 
                         # 5. معالجة البوستر
@@ -296,15 +323,15 @@ def get_movie_data(name, year=None):  # <--- أضفنا year هنا
                             omdb_poster = upload_poster_to_cloudinary(omdb_poster)
 
                         return (
-                            res_o.get("imdbID"),
-                            res_o.get("Title"),
-                            story,
-                            omdb_poster,
-                            labels,
-                            duration,
-                            rating,
-                            runtime_str,
-                            release_year,
+                            res_o.get("imdbID"),  # ID
+                            res_o.get("Title"),  # Title
+                            story,  # Story (المترجمة)
+                            omdb_poster,  # Poster المرفوع
+                            labels,  # التصنيفات (المترجمة عربي)
+                            duration,  # ISO Duration
+                            rating,  # التقييم (الذي أصلحناه)
+                            runtime_str,  # الوقت المقروء
+                            release_year,  # السنة
                         )
                     else:
                         print(
