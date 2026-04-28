@@ -86,6 +86,9 @@ genre_map = {
     "Thriller": "إثارة",
     "War": "حرب",
     "Western": "غرب أمريكي",
+    "Sport": "رياضة",
+    "Short": "قصير",
+    "Sci-Fi": "خيال علمي",
 }
 
 
