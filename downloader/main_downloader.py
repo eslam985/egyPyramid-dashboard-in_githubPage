@@ -584,14 +584,14 @@ async def get_direct_link_via_playwright(embed_url):
 
 async def get_mixdrop_direct_link(embed_url):
     from playwright.async_api import async_playwright
-    log = print
+
     # 1. تجهيز رابط التحميل
     # تحويل من mixdrop.ps/e/xxx إلى mixdrop.ps/f/xxx?download
     target_url = embed_url.replace("/e/", "/f/")
     if "?download" not in target_url:
         target_url += "?download"
 
-    log.info(f"🔍 جاري صيد MixDrop من: {target_url}")
+    print(f"🔍 جاري صيد MixDrop من: {target_url}")
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -609,7 +609,7 @@ async def get_mixdrop_direct_link(embed_url):
             await page.wait_for_selector(btn_selector, state="visible", timeout=10000)
 
             # 3. محاكاة النقرة لتوليد الرابط (MixDrop بيحتاج نقرة لتفعيل الـ href)
-            log.info("🖱️ نقرة أولى لتفعيل رابط التحميل...")
+            print("🖱️ نقرة أولى لتفعيل رابط التحميل...")
             await page.click(btn_selector)
 
             # انتظار بسيط لتحديث الـ DOM وظهور الرابط المباشر في الـ href
@@ -619,12 +619,12 @@ async def get_mixdrop_direct_link(embed_url):
             direct_link = await page.get_attribute(btn_selector, "href")
 
             if direct_link and "mxcontent.net" in direct_link:
-                log.info(f"✅ تم صيد رابط MixDrop المباشر: {direct_link[:50]}...")
+                print(f"✅ تم صيد رابط MixDrop المباشر: {direct_link[:50]}...")
                 await browser.close()
                 return direct_link
             else:
                 # محاولة ثانية لو الرابط اتولد في مكان تاني أو احتاج وقت أطول
-                log.warning("⚠️ الرابط لم يظهر بعد، محاولة أخيرة...")
+                print("⚠️ الرابط لم يظهر بعد، محاولة أخيرة...")
                 await page.wait_for_timeout(3000)
                 direct_link = await page.get_attribute(btn_selector, "href")
 
@@ -632,7 +632,7 @@ async def get_mixdrop_direct_link(embed_url):
             return direct_link if direct_link and "http" in direct_link else None
 
         except Exception as e:
-            log.error(f"❌ فشل صيد MixDrop: {str(e)}")
+            print(f"❌ فشل صيد MixDrop: {str(e)}")
             await browser.close()
             return None
 
