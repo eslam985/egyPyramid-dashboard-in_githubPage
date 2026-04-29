@@ -584,7 +584,7 @@ async def get_direct_link_via_playwright(embed_url):
 
 async def get_mixdrop_direct_link(embed_url):
     from playwright.async_api import async_playwright
-
+    log = print
     # 1. تجهيز رابط التحميل
     # تحويل من mixdrop.ps/e/xxx إلى mixdrop.ps/f/xxx?download
     target_url = embed_url.replace("/e/", "/f/")
