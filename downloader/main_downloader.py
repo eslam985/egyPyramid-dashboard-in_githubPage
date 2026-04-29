@@ -605,33 +605,38 @@ async def get_mixdrop_direct_link(embed_url):
             btn_selector = "a.download-btn"
 
             # محاولة النقر حتى 10 مرات لضمان استجابة السيرفر مهما زادت الإعلانات
-            for i in range(1, 11):
-                await page.wait_for_selector(btn_selector, state="visible")
-                print(f"🖱️ نقرة رقم {i}...")
+            # محاولة النقر حتى 10 مرات
+            for i in range(1, 20):
+                try:
+                    await page.wait_for_selector(btn_selector, state="visible", timeout=10000)
+                    print(f"🖱️ نقرة رقم {i}...")
 
-                # نراقب فتح نافذة جديدة (إعلان)
-                async with context.expect_page() as new_page_info:
-                    await page.click(btn_selector)
+                    # نراقب فتح نافذة جديدة - مع معالجة الخطأ لو الإعلان مفتحش
+                    try:
+                        async with context.expect_page(timeout=12000) as new_page_info: # رفعنا الوقت لـ 12 ثانية
+                            await page.click(btn_selector)
+                        
+                        ad_page = await new_page_info.value
+                        print(f"📺 إعلان ظهر، ننتظره قليلاً...")
+                        await page.wait_for_timeout(3000)
+                        await ad_page.close() 
+                    except Exception:
+                        print(f"⚠️ النقرة {i} لم تفتح إعلاناً، قد يكون الموقع بطيئاً. سنكمل...")
 
-                # الإعلان فتح.. ننتظر 3 ثواني كأننا "شفناه"
-                ad_page = await new_page_info.value
-                print(f"📺 إعلان ظهر في نافذة جديدة، ننتظره قليلاً...")
-                await page.wait_for_timeout(3000)
-                await ad_page.close()  # قفل الإعلان
+                    await page.bring_to_front()
 
-                # العودة والتركيز على الصفحة الأصلية
-                await page.bring_to_front()
+                    # فحص الرابط المباشر
+                    href = await page.get_attribute(btn_selector, "href")
+                    if href and "mxcontent.net" in href:
+                        print(f"✅ أخيراً! الزرار اتحقن بالرابط المباشر.")
+                        await browser.close()
+                        return href
 
-                # فحص هل الزرار تحول لرابط؟
-                href = await page.get_attribute(btn_selector, "href")
-                if href and "mxcontent.net" in href:
-                    print(f"✅ أخيراً! الزرار اتحقن بالرابط المباشر.")
-                    await browser.close()
-                    return href
-
-                # لو لسه مظهرش، ممكن يكون مكتوب عليه Please Wait
-                print("⏳ الرابط لم يظهر بعد، ننتظر ثواني للنقرة التالية...")
-                await page.wait_for_timeout(4000)
+                    print("⏳ الرابط لم يظهر بعد، ننتظر ثواني للنقرة التالية...")
+                    await page.wait_for_timeout(5000) # زودنا الانتظار لـ 5 ثواني عشان ندي فرصة للسيرفر
+                except Exception as e:
+                    print(f"⚠️ خطأ في المحاولة {i}: {str(e)}")
+                    continue # لو محاولة فشلت يكمل للي بعدها ميفصلش السكريبت
 
             await browser.close()
             return None
