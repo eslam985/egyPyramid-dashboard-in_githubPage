@@ -585,74 +585,70 @@ async def get_direct_link_via_playwright(embed_url):
 async def get_mixdrop_direct_link(embed_url):
     from playwright.async_api import async_playwright
 
-    # تحويل الرابط لصفحة التحميل مباشرة
     target_url = embed_url.replace("/e/", "/f/")
     if "?download" not in target_url:
         target_url += "?download"
 
-    print(f"🔍 محاولة الاختراق النهائي لـ MixDrop: {target_url}")
+    print(f"🚀 محاولة الاختراق بالهندسة العكسية: {target_url}")
 
     async with async_playwright() as p:
+        # تشغيل المتصفح مع إخفاء ملامح الأتمتة تماماً
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            viewport={"width": 1920, "height": 1080},
         )
         page = await context.new_page()
 
         try:
-            # 1. مراقبة الشبكة بحثاً عن أي JSON فيه كلمة "url"
-            direct_link = None
+            # 1. الذهاب للصفحة
+            await page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
 
-            async def catch_json(response):
-                nonlocal direct_link
-                if "download" in response.url or "mxcontent" in response.url:
-                    try:
-                        # لو الرد JSON، اسحب الرابط منه
-                        if "application/json" in response.headers.get(
-                            "content-type", ""
-                        ):
-                            data = await response.json()
-                            if data.get("url"):
-                                direct_link = data.get("url")
-                    except:
-                        pass
-
-            page.on("response", catch_json)
-
-            # 2. الذهاب للرابط مباشرة
-            await page.goto(target_url, wait_until="domcontentloaded")
-
-            # 3. تدمير أي عوائق (الـ Overlay اللي اكتشفته)
-            await page.evaluate("""() => {
+            # 2. حقن سكريبت لاختراق الـ API وتجاوز الـ CORS والـ Overlay
+            print("💉 حقن سكريبت الاستخراج المباشر...")
+            direct_link = await page.evaluate("""async () => {
+                // إزالة العوائق
                 document.querySelectorAll('div[style*="position: fixed"], #dontfoid').forEach(el => el.remove());
+                
+                try {
+                    const fileId = window.location.pathname.split('/').pop();
+                    // محاكاة طلب الـ API الرسمي للموقع
+                    const response = await fetch(`/f/${fileId}?download`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const data = await response.json();
+                    return data.url || null;
+                } catch (e) {
+                    // إذا فشل الـ fetch، نحاول استخراج الـ href من الزر بعد نقرة وهمية
+                    const btn = document.querySelector('a.download-btn');
+                    if (btn) {
+                        btn.click();
+                        await new Promise(r => setTimeout(r, 5000));
+                        return btn.href.includes('mxcontent') ? btn.href : null;
+                    }
+                }
+                return null;
             }""")
 
-            # 4. محاكاة نقرة حقيقية (Human-like Click)
-            btn_selector = "a.download-btn"
-            if await page.is_visible(btn_selector):
-                print("🖱️ النقر لتوليد الرابط المباشر...")
-                await page.click(btn_selector, delay=500)  # تأخير بسيط لمحاكاة البشر
-
-            # 5. الانتظار حتى يتم صيد الرابط من الشبكة أو الزرار
-            for _ in range(10):
-                if direct_link:
-                    break
-                # تفقد الزرار ربما تحديث الـ href
-                href = await page.get_attribute(btn_selector, "href")
-                if href and "mxcontent.net" in href:
-                    direct_link = href
-                    break
-                await page.wait_for_timeout(1000)
+            # 3. إذا لم ينجح الحقن، ننتظر قليلاً ونفحص الروابط
+            if not direct_link:
+                await page.wait_for_timeout(5000)
+                all_links = await page.evaluate(
+                    """() => Array.from(document.querySelectorAll('a')).map(a => a.href)"""
+                )
+                direct_link = next((l for l in all_links if "mxcontent.net" in l), None)
 
             await browser.close()
 
-            if direct_link:
-                print(f"✅ نجح الاختراق: {direct_link[:60]}")
+            if direct_link and "mxcontent.net" in direct_link:
+                print(f"✅ تم الصيد بنجاح: {direct_link[:60]}")
                 return direct_link
+
+            print("❌ فشلت جميع محاولات الاستخراج.")
             return None
 
         except Exception as e:
-            print(f"❌ فشل الاختراق: {str(e)}")
+            print(f"❌ خطأ تقني: {str(e)}")
             await browser.close()
             return None
 
