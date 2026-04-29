@@ -524,6 +524,7 @@ def get_smart_headers(url):
 
 # --- 1. إضافة دالة الصيد في أعلى ملف سكربت التحميل ---
 async def get_direct_link_via_playwright(embed_url):
+
     from playwright.async_api import async_playwright
 
     # تحويل الرابط للمسار المطلوب
@@ -577,6 +578,61 @@ async def get_direct_link_via_playwright(embed_url):
 
         except Exception as e:
             print.error(f"❌ خطأ أثناء الصيد بالمتصفح: {str(e)}")
+            await browser.close()
+            return None
+
+
+async def get_mixdrop_direct_link(embed_url):
+    from playwright.async_api import async_playwright
+
+    # 1. تجهيز رابط التحميل
+    # تحويل من mixdrop.ps/e/xxx إلى mixdrop.ps/f/xxx?download
+    target_url = embed_url.replace("/e/", "/f/")
+    if "?download" not in target_url:
+        target_url += "?download"
+
+    log.info(f"🔍 جاري صيد MixDrop من: {target_url}")
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        # إعدادات متصفح حقيقي لتجاوز الحماية
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        )
+        page = await context.new_page()
+
+        try:
+            await page.goto(target_url, wait_until="networkidle", timeout=30000)
+
+            # 2. البحث عن زر التحميل
+            btn_selector = "a.download-btn"
+            await page.wait_for_selector(btn_selector, state="visible", timeout=10000)
+
+            # 3. محاكاة النقرة لتوليد الرابط (MixDrop بيحتاج نقرة لتفعيل الـ href)
+            log.info("🖱️ نقرة أولى لتفعيل رابط التحميل...")
+            await page.click(btn_selector)
+
+            # انتظار بسيط لتحديث الـ DOM وظهور الرابط المباشر في الـ href
+            await page.wait_for_timeout(2000)
+
+            # 4. استخراج الرابط النهائي
+            direct_link = await page.get_attribute(btn_selector, "href")
+
+            if direct_link and "mxcontent.net" in direct_link:
+                log.info(f"✅ تم صيد رابط MixDrop المباشر: {direct_link[:50]}...")
+                await browser.close()
+                return direct_link
+            else:
+                # محاولة ثانية لو الرابط اتولد في مكان تاني أو احتاج وقت أطول
+                log.warning("⚠️ الرابط لم يظهر بعد، محاولة أخيرة...")
+                await page.wait_for_timeout(3000)
+                direct_link = await page.get_attribute(btn_selector, "href")
+
+            await browser.close()
+            return direct_link if direct_link and "http" in direct_link else None
+
+        except Exception as e:
+            log.error(f"❌ فشل صيد MixDrop: {str(e)}")
             await browser.close()
             return None
 
@@ -804,18 +860,25 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
     # 1. جلب الهيدرز الذكية بناءً على الرابط الممرر للدالة
     # --- 2. دمج المنطق داخل دالة التحميل الأساسية ---
 
-    # قبل جزء بناء الـ cmd مباشرة، أضف هذا الشرط المنقذ:
+    # 1. معالجة روابط VidTube/Lulu
     if "vidtube.one" in url or "cdn-tube" in url:
-        print(
-            "🎯 تم اكتشاف رابط VidTube/Lulu.. جاري استخراج الرابط المباشر لتجنب الحماية..."
-        )
+        print("🎯 تم اكتشاف رابط VidTube/Lulu.. جاري استخراج الرابط المباشر...")
         direct_link = await get_direct_link_via_playwright(url)
-
         if direct_link:
             print(f"✅ تم صيد الرابط بنجاح! سيتم التحميل الآن.")
-            url = direct_link  # استبدال الرابط القديم بالرابط المباشر الجديد
+            url = direct_link
         else:
-            print.warning("⚠️ فشل الصيد، سنحاول بالرابط الأصلي (قد يفشل).")
+            print("⚠️ فشل الصيد، سنحاول بالرابط الأصلي (قد يفشل).")
+
+    # 2. معالجة روابط MixDrop (باستخدام elif لزيادة الكفاءة)
+    elif "mixdrop" in url:
+        print("🎯 تم اكتشاف رابط MixDrop.. جاري الصيد من صفحة التحميل...")
+        direct_link = await get_mixdrop_direct_link(url)
+        if direct_link:
+            print(f"✅ تم صيد رابط MixDrop المباشر بنجاح.")
+            url = direct_link
+        else:
+            print("⚠️ فشل الصيد، سنحاول بالرابط الأصلي (قد يفشل).")
 
     # الآن يكمل الكود بناء الـ cmd بالرابط الجديد (url)
     smart_headers = get_smart_headers(url)
@@ -1142,7 +1205,9 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     extract_dir_current, f"disguised_{idx}.mp4"
                 )
 
-                print(f"🕵️ جاري تطبيق التمويه لكسر البصمة: {os.path.basename(vid_path)}")
+                print(
+                    f"🕵️ جاري تطبيق التمويه لكسر البصمة: {os.path.basename(vid_path)}"
+                )
 
                 # تأكد أن LOGO_FILE معرف في بداية السكريبت
                 # أولاً: نحصل على مدة الفيديو بالثواني (لإظهار النص في نصف الوقت بالضبط)
