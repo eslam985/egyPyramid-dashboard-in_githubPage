@@ -601,8 +601,8 @@ async def get_mixdrop_direct_link(embed_url):
             await page.goto(target_url, wait_until="domcontentloaded")
             btn_selector = "a.download-btn"
             
-            # محاولة النقر حتى 5 مرات (لإخراج كل الإعلانات)
-            for i in range(1, 6):
+            # محاولة النقر حتى 10 مرات لضمان استجابة السيرفر مهما زادت الإعلانات
+            for i in range(1, 11):
                 await page.wait_for_selector(btn_selector, state="visible")
                 print(f"🖱️ نقرة رقم {i}...")
                 
