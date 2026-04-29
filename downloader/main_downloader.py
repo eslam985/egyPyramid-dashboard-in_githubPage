@@ -602,37 +602,41 @@ async def get_mixdrop_direct_link(embed_url):
         page = await context.new_page()
 
         try:
+            # 1. الذهاب للصفحة
             await page.goto(target_url, wait_until="networkidle", timeout=30000)
 
-            # 2. البحث عن زر التحميل
             btn_selector = "a.download-btn"
             await page.wait_for_selector(btn_selector, state="visible", timeout=10000)
 
-            # 3. محاكاة النقرة لتوليد الرابط (MixDrop بيحتاج نقرة لتفعيل الـ href)
-            print("🖱️ نقرة أولى لتفعيل رابط التحميل...")
-            await page.click(btn_selector)
+            print("🖱️ جاري النقر لتوليد الرابط (وتجاهل الإعلانات)...")
 
-            # انتظار بسيط لتحديث الـ DOM وظهور الرابط المباشر في الـ href
-            await page.wait_for_timeout(2000)
+            # 2. مراقبة الـ Response اللي جاي من السيرفر
+            # إحنا بنستنى أي استجابة نوعها JSON وفيها الرابط
+            async with page.expect_response(lambda response: "mxcontent.net" in response.url or (response.status == 200 and "download" in response.url.lower()), timeout=15000) as response_info:
+                # بننفذ النقرة اللي بتشغل الـ API
+                await page.click(btn_selector)
+                
+                # لو فيه إعلانات فتحت، Playwright هيفضل مركز في الصفحة الأصلية
+                response = await response_info.value
+                
+                # استخراج الرابط من الـ JSON اللي السيرفر بعته
+                res_data = await response.json()
+                direct_link = res_data.get("url")
 
-            # 4. استخراج الرابط النهائي
-            direct_link = await page.get_attribute(btn_selector, "href")
-
-            if direct_link and "mxcontent.net" in direct_link:
-                print(f"✅ تم صيد رابط MixDrop المباشر: {direct_link[:50]}...")
+            if direct_link:
+                print(f"✅ تم صيد الكنز من الـ API: {direct_link[:60]}...")
                 await browser.close()
                 return direct_link
-            else:
-                # محاولة ثانية لو الرابط اتولد في مكان تاني أو احتاج وقت أطول
-                print("⚠️ الرابط لم يظهر بعد، محاولة أخيرة...")
-                await page.wait_for_timeout(3000)
-                direct_link = await page.get_attribute(btn_selector, "href")
 
+            # 3. محاولة أخيرة لو الرابط مظهرش كـ JSON وظهر كـ href عادي بعد الـ "Please Wait"
+            await page.wait_for_timeout(5000) # انتظار الـ Please Wait اللي قولت عليها
+            direct_link = await page.get_attribute(btn_selector, "href")
+            
             await browser.close()
             return direct_link if direct_link and "http" in direct_link else None
 
         except Exception as e:
-            print(f"❌ فشل صيد MixDrop: {str(e)}")
+            print(f"❌ خطأ أثناء صيد MixDrop: {str(e)}")
             await browser.close()
             return None
 
