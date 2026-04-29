@@ -602,41 +602,43 @@ async def get_mixdrop_direct_link(embed_url):
         page = await context.new_page()
 
         try:
-            # 1. الذهاب للصفحة
-            await page.goto(target_url, wait_until="networkidle", timeout=30000)
+            # 1. الذهاب للصفحة بانتظار أقل للشبكة عشان ميعلقش
+            await page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
 
             btn_selector = "a.download-btn"
             await page.wait_for_selector(btn_selector, state="visible", timeout=10000)
 
-            print("🖱️ جاري النقر لتوليد الرابط (وتجاهل الإعلانات)...")
-
-            # 2. مراقبة الـ Response اللي جاي من السيرفر
-            # إحنا بنستنى أي استجابة نوعها JSON وفيها الرابط
-            async with page.expect_response(lambda response: "mxcontent.net" in response.url or (response.status == 200 and "download" in response.url.lower()), timeout=15000) as response_info:
-                # بننفذ النقرة اللي بتشغل الـ API
-                await page.click(btn_selector)
-                
-                # لو فيه إعلانات فتحت، Playwright هيفضل مركز في الصفحة الأصلية
-                response = await response_info.value
-                
-                # استخراج الرابط من الـ JSON اللي السيرفر بعته
-                res_data = await response.json()
-                direct_link = res_data.get("url")
-
-            if direct_link:
-                print(f"✅ تم صيد الكنز من الـ API: {direct_link[:60]}...")
-                await browser.close()
-                return direct_link
-
-            # 3. محاولة أخيرة لو الرابط مظهرش كـ JSON وظهر كـ href عادي بعد الـ "Please Wait"
-            await page.wait_for_timeout(5000) # انتظار الـ Please Wait اللي قولت عليها
-            direct_link = await page.get_attribute(btn_selector, "href")
+            print("🖱️ جاري النقر العنيف (Force Click) لتوليد الرابط...")
             
+            # نقرة قوية تتجاوز الإعلانات اللي فوق الزرار
+            await page.click(btn_selector, force=True)
+            
+            # انتظر 7 ثواني (وقت كافي لظهور كلمة Please Wait وتحولها لرابط)
+            print("⏳ انتظار معالجة الرابط (7 ثواني)...")
+            await page.wait_for_timeout(7000)
+
+            # 2. محاولة سحب الرابط من الزرار نفسه (الـ href بيتغير بعد الانتظار)
+            direct_link = await page.get_attribute(btn_selector, "href")
+
+            # 3. لو ملقناش الرابط في الزرار، هندور في كل الروابط اللي في الصفحة (Scrape all links)
+            if not direct_link or "mxcontent.net" not in direct_link:
+                print("🔍 الرابط لم يظهر في الزرار، جاري البحث في أحشاء الصفحة...")
+                all_links = await page.evaluate('''() => Array.from(document.querySelectorAll('a')).map(a => a.href)''')
+                for link in all_links:
+                    if "mxcontent.net" in link:
+                        direct_link = link
+                        break
+
             await browser.close()
-            return direct_link if direct_link and "http" in direct_link else None
+
+            if direct_link and "mxcontent.net" in direct_link:
+                print(f"✅ تم صيد الكنز أخيراً: {direct_link[:60]}...")
+                return direct_link
+            
+            return None
 
         except Exception as e:
-            print(f"❌ خطأ أثناء صيد MixDrop: {str(e)}")
+            print(f"❌ خطأ غير متوقع: {str(e)}")
             await browser.close()
             return None
 
