@@ -584,14 +584,17 @@ async def get_direct_link_via_playwright(embed_url):
 
 async def get_mixdrop_direct_link(embed_url):
     from playwright.async_api import async_playwright
-    
+
     target_url = embed_url.replace("/e/", "/f/")
-    if "?download" not in target_url: target_url += "?download"
+    if "?download" not in target_url:
+        target_url += "?download"
 
     print(f"🕵️ محاكاة سلوك بشري على: {target_url}")
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True) # يمكن جعلها False لو بتجرب محلياً
+        browser = await p.chromium.launch(
+            headless=True
+        )  # يمكن جعلها False لو بتجرب محلياً
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
         )
@@ -600,32 +603,32 @@ async def get_mixdrop_direct_link(embed_url):
         try:
             await page.goto(target_url, wait_until="domcontentloaded")
             btn_selector = "a.download-btn"
-            
+
             # محاولة النقر حتى 10 مرات لضمان استجابة السيرفر مهما زادت الإعلانات
             for i in range(1, 11):
                 await page.wait_for_selector(btn_selector, state="visible")
                 print(f"🖱️ نقرة رقم {i}...")
-                
+
                 # نراقب فتح نافذة جديدة (إعلان)
                 async with context.expect_page() as new_page_info:
                     await page.click(btn_selector)
-                
+
                 # الإعلان فتح.. ننتظر 3 ثواني كأننا "شفناه"
                 ad_page = await new_page_info.value
                 print(f"📺 إعلان ظهر في نافذة جديدة، ننتظره قليلاً...")
                 await page.wait_for_timeout(3000)
-                await ad_page.close() # قفل الإعلان
-                
+                await ad_page.close()  # قفل الإعلان
+
                 # العودة والتركيز على الصفحة الأصلية
                 await page.bring_to_front()
-                
+
                 # فحص هل الزرار تحول لرابط؟
                 href = await page.get_attribute(btn_selector, "href")
                 if href and "mxcontent.net" in href:
                     print(f"✅ أخيراً! الزرار اتحقن بالرابط المباشر.")
                     await browser.close()
                     return href
-                
+
                 # لو لسه مظهرش، ممكن يكون مكتوب عليه Please Wait
                 print("⏳ الرابط لم يظهر بعد، ننتظر ثواني للنقرة التالية...")
                 await page.wait_for_timeout(4000)
