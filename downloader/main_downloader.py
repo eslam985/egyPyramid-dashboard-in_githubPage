@@ -604,20 +604,24 @@ async def get_mixdrop_direct_link(embed_url):
             await page.goto(target_url, wait_until="domcontentloaded")
             btn_selector = "a.download-btn"
 
-            # محاولة النقر حتى 10 مرات لضمان استجابة السيرفر مهما زادت الإعلانات
-            # محاولة النقر حتى 10 مرات
-            for i in range(1, 8):
+            # رفعنا المدى لـ 10 لضمان وجود محاولات كافية بعد الـ Reload
+            for i in range(1, 11):
                 try:
                     await page.wait_for_selector(
                         btn_selector, state="visible", timeout=10000
                     )
                     print(f"🖱️ نقرة رقم {i}...")
 
-                    # نراقب فتح نافذة جديدة - مع معالجة الخطأ لو الإعلان مفتحش
+                    # --- ⚡ تعديل الـ Reload الذكي ⚡ ---
+                    if i == 5:
+                        print("🔄 الموقع يبدو متجمداً.. جاري إعادة تحميل الصفحة (Reload) للتنشيط...")
+                        await page.reload(wait_until="domcontentloaded")
+                        await page.wait_for_timeout(3000)
+                        continue 
+                    # ----------------------------------
+
                     try:
-                        async with context.expect_page(
-                            timeout=12000
-                        ) as new_page_info:  # رفعنا الوقت لـ 12 ثانية
+                        async with context.expect_page(timeout=10000) as new_page_info:
                             await page.click(btn_selector)
 
                         ad_page = await new_page_info.value
@@ -625,9 +629,8 @@ async def get_mixdrop_direct_link(embed_url):
                         await page.wait_for_timeout(3000)
                         await ad_page.close()
                     except Exception:
-                        print(
-                            f"⚠️ النقرة {i} لم تفتح إعلاناً، قد يكون الموقع بطيئاً. سنكمل..."
-                        )
+                        print(f"⚠️ النقرة {i} لم تفتح إعلاناً.")
+                    # ----------------------------------
 
                     await page.bring_to_front()
 
