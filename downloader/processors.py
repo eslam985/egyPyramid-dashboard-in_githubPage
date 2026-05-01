@@ -89,6 +89,7 @@ genre_map = {
     "Sport": "رياضة",
     "Short": "قصير",
     "Sci-Fi": "خيال علمي",
+    "Biography": "سيرة شخصية",
 }
 
 
