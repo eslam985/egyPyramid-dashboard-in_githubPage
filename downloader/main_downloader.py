@@ -626,20 +626,28 @@ async def get_mixdrop_direct_link(embed_url):
 
                         ad_page = await new_page_info.value
                         print(f"📺 إعلان ظهر، ننتظره قليلاً...")
-                        await page.wait_for_timeout(3000)
+                        await page.wait_for_timeout(5000)
                         await ad_page.close()
                     except Exception:
                         print(f"⚠️ النقرة {i} لم تفتح إعلاناً.")
                     # ----------------------------------
 
                     await page.bring_to_front()
-
-                    # فحص الرابط المباشر
+                    
+                    # فحص الرابط المباشر - صيد الدومينات الفرعية الجديدة
                     href = await page.get_attribute(btn_selector, "href")
-                    if href and "mxcontent.net" in href:
-                        print(f"✅ أخيراً! الزرار اتحقن بالرابط المباشر.")
-                        await browser.close()
-                        return href
+                    
+                    if href and href.startswith("http"):
+                        # فحص ذكي: هل الرابط يحتوي على كلمة mxcontent (بأي شكل) أو ليس له علاقة بـ mixdrop؟
+                        is_valid_direct = (
+                            "mxcontent" in href or 
+                            (not ("?download" in href or "mixdrop" in href))
+                        )
+                        
+                        if is_valid_direct:
+                            print(f"✅ تم صيد الرابط بنجاح: {href[:60]}...")
+                            await browser.close()
+                            return href
 
                     print("⏳ الرابط لم يظهر بعد، ننتظر ثواني للنقرة التالية...")
                     await page.wait_for_timeout(
