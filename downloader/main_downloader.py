@@ -1070,10 +1070,26 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         if actual_downloaded_path:
             print(f"✅ تم اكتمال التحميل الفعلي: {actual_downloaded_path}")
         else:
-            # طباعة المحتوى للمساعدة في التشخيص لو فشل تاني
-            print(
-                f"❌ فشل التحميل: المجلد فارغ! المحتوى الموجود: {os.listdir(extract_dir)}"
-            )
+            print(f"❌ فشل التحميل: المجلد فارغ! المحتوى الموجود: {os.listdir(extract_dir)}")
+            
+            # --- 🧹 تنظيف الأشباح فور الفشل ---
+            if media_id:
+                try:
+                    # حذف الميديا لأن التحميل فشل
+                    supabase.table("medias").delete().eq("id", media_id).execute()
+                    print(f"🧹 تم حذف سجل الميديا الفارغ (ID: {media_id})")
+                    
+                    if task_id:
+                        supabase.table("download_tasks").update({
+                            "status": "failed",
+                            "status_message": "❌ فشل: المجلد فارغ (رابط مكسور)",
+                        }).eq("id", task_id).execute()
+                except Exception as clean_err:
+                    print(f"⚠️ فشل تنظيف الميديا: {clean_err}")
+            
+            # بدلاً من continue اللي سببت المشكلة، هنستخدم return 
+            # عشان نخرج من "الدالة الحالية" وننهي معالجة الفيلم ده بسلام
+            return
 
     else:
         # حالة الملف المحلي
