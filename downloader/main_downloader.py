@@ -1695,7 +1695,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     row=row_data_for_tg,
                     content_type=category_search,  # <--- استخدم المتغير ده بدل الشرط اليدوي
                     action_text="المشاهدة",
-                    post_url="https://egypyramid.vercel.app/",  # يفضل وضع رابط المقال الفعلي لو متاح
+                    post_url=final_poster,  # يفضل وضع رابط المقال الفعلي لو متاح
                     lang_val="لغة أصلية (مترجم)",
                 )
 
@@ -1712,30 +1712,38 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     # التحقق من وجود بوستر ووصف (ليسوا فارغين)
                     has_metadata = bool(meta_story and meta_story.strip()) and bool(final_poster and final_poster.strip())
 
-                    if links_count >= 3 and has_metadata:
-                        supabase.table("medias").update({"is_ready": True}).eq("id", media_id).execute()
-                        print(f"🚀 تم إطلاق إشارة الجاهزية للميديا رقم: {media_id} (سيرفرات: {links_count})")
-                        quality_pass = True
+                    # المنطق الجديد: النجاح يعتمد على الروابط فقط، والجاهزية تعتمد على الكل
+                    if links_count >= 3:
+                        quality_pass = True # اعتبر المهمة نجحت طالما فيه لينكات
+                        
+                        if has_metadata:
+                            # لو فيه لينكات + داتا = أطلق الجاهزية فوراً
+                            supabase.table("medias").update({"is_ready": True}).eq("id", media_id).execute()
+                            print(f"🚀 تم إطلاق إشارة الجاهزية الكاملة (سيرفرات: {links_count})")
+                        else:
+                            # لو فيه لينكات بس مفيش داتا = سيبها False واطبع تحذير
+                            print(f"🟡 تم الحفظ بنجاح ولكن بدون جاهزية (نقص في الصورة أو الوصف)")
                     else:
-                        print(f"⚠️ الميديا {media_id} غير جاهزة للنشر (سيرفرات: {links_count}, داتا: {has_metadata})")
+                        quality_pass = False # هنا فعلاً فشل لأن مفيش لينكات كافية
 
-                # 5. إغلاق المهمة بناءً على الجودة أو الحذف لو فشل التحميل
+                # 5. إغلاق المهمة (حذف فقط في حالة انعدام الروابط)
                 if task_id:
                     if media_id and not quality_pass:
-                        # إذا لم تمر الميديا بفحص الجودة (فشل تحميل/روابط ناقصة)، نحذف الميديا فوراً
-                        # ملاحظة: سيقوم الـ Cascade Delete بحذف الحلقات واللينكات المرتبطة أوتوماتيكياً
+                        # الحذف هنا فقط لو السيرفرات أقل من 3
                         supabase.table("medias").delete().eq("id", media_id).execute()
-                        print(f"🗑️ تم حذف الميديا {media_id} لعدم اكتمال السيرفرات أو البيانات.")
+                        print(f"🗑️ تم حذف الميديا لعدم وجود روابط كافية.")
                         
                         supabase.table("download_tasks").update({
                             "status": "failed",
-                            "status_message": "❌ فشل: لم يتم توفير الحد الأدنى من السيرفرات (تم حذف الميديا)",
+                            "status_message": "❌ فشل: السيرفرات أقل من 3",
                         }).eq("id", task_id).execute()
                     else:
+                        # هنا هيدخل لو quality_pass بـ True (سواء بـ is_ready أو لأ)
+                        msg = "✅ اكتملت بنجاح!" if has_metadata else "⚠️ اكتملت بنجاح (يرجى إضافة الصورة والوصف يدوياً)"
                         supabase.table("download_tasks").update({
                             "status": "completed",
                             "progress_percent": 100,
-                            "status_message": "✅ اكتملت جميع المراحل بنجاح!",
+                            "status_message": msg,
                         }).eq("id", task_id).execute()
 
             except Exception as e:
@@ -1767,6 +1775,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         if os.path.exists(extract_dir):
             shutil.rmtree(extract_dir)
         print(f"\n✨ المهمة انتهت بنجاح!")
+        
 
 
 async def run_pyramid_tasks(task_list):
