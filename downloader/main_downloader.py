@@ -1702,22 +1702,41 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 if status:
                     print(f"✅ كولاب أرسل تمبلت تليجرام بنجاح")
 
-                # 4. تفعيل الجاهزية بالـ ID المباشر (القاضية)
+                # 4. فحص الجودة قبل تفعيل الجاهزية (المنطق الجديد)
+                quality_pass = False
                 if media_id:
-                    supabase.table("medias").update({"is_ready": True}).eq(
-                        "id", media_id
-                    ).execute()
-                    print(f"🚀 تم إطلاق إشارة الجاهزية للميديا رقم: {media_id}")
+                    # التحقق من وجود 3 سيرفرات على الأقل
+                    link_check = supabase.table("links").select("id", count="exact").eq("episode_id", e_id).execute()
+                    links_count = link_check.count if link_check.count is not None else 0
+                    
+                    # التحقق من وجود بوستر ووصف (ليسوا فارغين)
+                    has_metadata = bool(meta_story and meta_story.strip()) and bool(final_poster and final_poster.strip())
 
-                # 5. إغلاق المهمة في download_tasks
+                    if links_count >= 3 and has_metadata:
+                        supabase.table("medias").update({"is_ready": True}).eq("id", media_id).execute()
+                        print(f"🚀 تم إطلاق إشارة الجاهزية للميديا رقم: {media_id} (سيرفرات: {links_count})")
+                        quality_pass = True
+                    else:
+                        print(f"⚠️ الميديا {media_id} غير جاهزة للنشر (سيرفرات: {links_count}, داتا: {has_metadata})")
+
+                # 5. إغلاق المهمة بناءً على الجودة أو الحذف لو فشل التحميل
                 if task_id:
-                    supabase.table("download_tasks").update(
-                        {
+                    if media_id and not quality_pass:
+                        # إذا لم تمر الميديا بفحص الجودة (فشل تحميل/روابط ناقصة)، نحذف الميديا فوراً
+                        # ملاحظة: سيقوم الـ Cascade Delete بحذف الحلقات واللينكات المرتبطة أوتوماتيكياً
+                        supabase.table("medias").delete().eq("id", media_id).execute()
+                        print(f"🗑️ تم حذف الميديا {media_id} لعدم اكتمال السيرفرات أو البيانات.")
+                        
+                        supabase.table("download_tasks").update({
+                            "status": "failed",
+                            "status_message": "❌ فشل: لم يتم توفير الحد الأدنى من السيرفرات (تم حذف الميديا)",
+                        }).eq("id", task_id).execute()
+                    else:
+                        supabase.table("download_tasks").update({
                             "status": "completed",
                             "progress_percent": 100,
                             "status_message": "✅ اكتملت جميع المراحل بنجاح!",
-                        }
-                    ).eq("id", task_id).execute()
+                        }).eq("id", task_id).execute()
 
             except Exception as e:
                 # الـ except دي وظيفتها تبلغك لو الـ try اللي فوق فشلت

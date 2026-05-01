@@ -131,7 +131,7 @@ async def ensure_dependencies():
     if not shutil.which("unrar") or not shutil.which("ffprobe"):
         print("📥 unrar أو ffprobe مفقود، جاري التثبيت...")
         subprocess.run("apt-get update && apt-get install -y unrar ffmpeg", shell=True)
-
+    
     print("✅ جميع الأدوات جاهزة للعمل.")
 
 
