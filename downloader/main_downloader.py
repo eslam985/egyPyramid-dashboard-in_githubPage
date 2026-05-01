@@ -606,22 +606,28 @@ async def get_mixdrop_direct_link(embed_url):
 
             # محاولة النقر حتى 10 مرات لضمان استجابة السيرفر مهما زادت الإعلانات
             # محاولة النقر حتى 10 مرات
-            for i in range(1, 20):
+            for i in range(1, 8):
                 try:
-                    await page.wait_for_selector(btn_selector, state="visible", timeout=10000)
+                    await page.wait_for_selector(
+                        btn_selector, state="visible", timeout=10000
+                    )
                     print(f"🖱️ نقرة رقم {i}...")
 
                     # نراقب فتح نافذة جديدة - مع معالجة الخطأ لو الإعلان مفتحش
                     try:
-                        async with context.expect_page(timeout=12000) as new_page_info: # رفعنا الوقت لـ 12 ثانية
+                        async with context.expect_page(
+                            timeout=12000
+                        ) as new_page_info:  # رفعنا الوقت لـ 12 ثانية
                             await page.click(btn_selector)
-                        
+
                         ad_page = await new_page_info.value
                         print(f"📺 إعلان ظهر، ننتظره قليلاً...")
                         await page.wait_for_timeout(3000)
-                        await ad_page.close() 
+                        await ad_page.close()
                     except Exception:
-                        print(f"⚠️ النقرة {i} لم تفتح إعلاناً، قد يكون الموقع بطيئاً. سنكمل...")
+                        print(
+                            f"⚠️ النقرة {i} لم تفتح إعلاناً، قد يكون الموقع بطيئاً. سنكمل..."
+                        )
 
                     await page.bring_to_front()
 
@@ -633,10 +639,12 @@ async def get_mixdrop_direct_link(embed_url):
                         return href
 
                     print("⏳ الرابط لم يظهر بعد، ننتظر ثواني للنقرة التالية...")
-                    await page.wait_for_timeout(5000) # زودنا الانتظار لـ 5 ثواني عشان ندي فرصة للسيرفر
+                    await page.wait_for_timeout(
+                        5000
+                    )  # زودنا الانتظار لـ 5 ثواني عشان ندي فرصة للسيرفر
                 except Exception as e:
                     print(f"⚠️ خطأ في المحاولة {i}: {str(e)}")
-                    continue # لو محاولة فشلت يكمل للي بعدها ميفصلش السكريبت
+                    continue  # لو محاولة فشلت يكمل للي بعدها ميفصلش السكريبت
 
             await browser.close()
             return None
@@ -1070,24 +1078,28 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         if actual_downloaded_path:
             print(f"✅ تم اكتمال التحميل الفعلي: {actual_downloaded_path}")
         else:
-            print(f"❌ فشل التحميل: المجلد فارغ! المحتوى الموجود: {os.listdir(extract_dir)}")
-            
+            print(
+                f"❌ فشل التحميل: المجلد فارغ! المحتوى الموجود: {os.listdir(extract_dir)}"
+            )
+
             # --- 🧹 تنظيف الأشباح فور الفشل ---
             if media_id:
                 try:
                     # حذف الميديا لأن التحميل فشل
                     supabase.table("medias").delete().eq("id", media_id).execute()
                     print(f"🧹 تم حذف سجل الميديا الفارغ (ID: {media_id})")
-                    
+
                     if task_id:
-                        supabase.table("download_tasks").update({
-                            "status": "failed",
-                            "status_message": "❌ فشل: المجلد فارغ (رابط مكسور)",
-                        }).eq("id", task_id).execute()
+                        supabase.table("download_tasks").update(
+                            {
+                                "status": "failed",
+                                "status_message": "❌ فشل: المجلد فارغ (رابط مكسور)",
+                            }
+                        ).eq("id", task_id).execute()
                 except Exception as clean_err:
                     print(f"⚠️ فشل تنظيف الميديا: {clean_err}")
-            
-            # بدلاً من continue اللي سببت المشكلة، هنستخدم return 
+
+            # بدلاً من continue اللي سببت المشكلة، هنستخدم return
             # عشان نخرج من "الدالة الحالية" وننهي معالجة الفيلم ده بسلام
             return
 
@@ -1722,25 +1734,40 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 quality_pass = False
                 if media_id:
                     # التحقق من وجود 3 سيرفرات على الأقل
-                    link_check = supabase.table("links").select("id", count="exact").eq("episode_id", e_id).execute()
-                    links_count = link_check.count if link_check.count is not None else 0
-                    
+                    link_check = (
+                        supabase.table("links")
+                        .select("id", count="exact")
+                        .eq("episode_id", e_id)
+                        .execute()
+                    )
+                    links_count = (
+                        link_check.count if link_check.count is not None else 0
+                    )
+
                     # التحقق من وجود بوستر ووصف (ليسوا فارغين)
-                    has_metadata = bool(meta_story and meta_story.strip()) and bool(final_poster and final_poster.strip())
+                    has_metadata = bool(meta_story and meta_story.strip()) and bool(
+                        final_poster and final_poster.strip()
+                    )
 
                     # المنطق الجديد: النجاح يعتمد على الروابط فقط، والجاهزية تعتمد على الكل
                     if links_count >= 3:
-                        quality_pass = True # اعتبر المهمة نجحت طالما فيه لينكات
-                        
+                        quality_pass = True  # اعتبر المهمة نجحت طالما فيه لينكات
+
                         if has_metadata:
                             # لو فيه لينكات + داتا = أطلق الجاهزية فوراً
-                            supabase.table("medias").update({"is_ready": True}).eq("id", media_id).execute()
-                            print(f"🚀 تم إطلاق إشارة الجاهزية الكاملة (سيرفرات: {links_count})")
+                            supabase.table("medias").update({"is_ready": True}).eq(
+                                "id", media_id
+                            ).execute()
+                            print(
+                                f"🚀 تم إطلاق إشارة الجاهزية الكاملة (سيرفرات: {links_count})"
+                            )
                         else:
                             # لو فيه لينكات بس مفيش داتا = سيبها False واطبع تحذير
-                            print(f"🟡 تم الحفظ بنجاح ولكن بدون جاهزية (نقص في الصورة أو الوصف)")
+                            print(
+                                f"🟡 تم الحفظ بنجاح ولكن بدون جاهزية (نقص في الصورة أو الوصف)"
+                            )
                     else:
-                        quality_pass = False # هنا فعلاً فشل لأن مفيش لينكات كافية
+                        quality_pass = False  # هنا فعلاً فشل لأن مفيش لينكات كافية
 
                 # 5. إغلاق المهمة (حذف فقط في حالة انعدام الروابط)
                 if task_id:
@@ -1748,19 +1775,27 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                         # الحذف هنا فقط لو السيرفرات أقل من 3
                         supabase.table("medias").delete().eq("id", media_id).execute()
                         print(f"🗑️ تم حذف الميديا لعدم وجود روابط كافية.")
-                        
-                        supabase.table("download_tasks").update({
-                            "status": "failed",
-                            "status_message": "❌ فشل: السيرفرات أقل من 3",
-                        }).eq("id", task_id).execute()
+
+                        supabase.table("download_tasks").update(
+                            {
+                                "status": "failed",
+                                "status_message": "❌ فشل: السيرفرات أقل من 3",
+                            }
+                        ).eq("id", task_id).execute()
                     else:
                         # هنا هيدخل لو quality_pass بـ True (سواء بـ is_ready أو لأ)
-                        msg = "✅ اكتملت بنجاح!" if has_metadata else "⚠️ اكتملت بنجاح (يرجى إضافة الصورة والوصف يدوياً)"
-                        supabase.table("download_tasks").update({
-                            "status": "completed",
-                            "progress_percent": 100,
-                            "status_message": msg,
-                        }).eq("id", task_id).execute()
+                        msg = (
+                            "✅ اكتملت بنجاح!"
+                            if has_metadata
+                            else "⚠️ اكتملت بنجاح (يرجى إضافة الصورة والوصف يدوياً)"
+                        )
+                        supabase.table("download_tasks").update(
+                            {
+                                "status": "completed",
+                                "progress_percent": 100,
+                                "status_message": msg,
+                            }
+                        ).eq("id", task_id).execute()
 
             except Exception as e:
                 # الـ except دي وظيفتها تبلغك لو الـ try اللي فوق فشلت
@@ -1791,7 +1826,6 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         if os.path.exists(extract_dir):
             shutil.rmtree(extract_dir)
         print(f"\n✨ المهمة انتهت بنجاح!")
-        
 
 
 async def run_pyramid_tasks(task_list):
