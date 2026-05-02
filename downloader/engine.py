@@ -14,7 +14,6 @@ from functools import partial  # استيراد واحد يكفي
 from datetime import datetime
 from groq import Groq
 
-
 try:
     from tqdm import tqdm as tqdm_base
 except ImportError:
@@ -131,7 +130,7 @@ async def ensure_dependencies():
     if not shutil.which("unrar") or not shutil.which("ffprobe"):
         print("📥 unrar أو ffprobe مفقود، جاري التثبيت...")
         subprocess.run("apt-get update && apt-get install -y unrar ffmpeg", shell=True)
-    
+
     print("✅ جميع الأدوات جاهزة للعمل.")
 
 
@@ -152,7 +151,7 @@ class ProgressStream:
             if self.episode_id and (time.time() - self.last_update_time > 5):
                 total = self.pbar.total if self.pbar.total else 1
                 percent = int((self.pbar.n / total) * 100)
-                
+
                 # استخدام ThreadPoolExecutor أو أي وسيلة غير بلوكية سيكون أفضل
                 # لكن حالياً، على الأقل زدنا الوقت ليقل الضغط
                 try:

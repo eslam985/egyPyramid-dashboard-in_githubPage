@@ -528,9 +528,9 @@ def upload_poster_to_cloudinary(image_url):
         if public_id:
             # f_webp: تجعل كلاود ناري يسلم الصورة بصيغة WebP مهما كان الأصل
             # q_auto:good: تعطي جودة ممتازة مع حجم صغير جداً
-            transform = "c_fill,g_auto,w_300,h_450,q_auto:good,f_webp"
+            transform = "c_fill,g_auto,w_300,h_450,q_auto:good,f_avif"
 
-            return f"https://res.cloudinary.com/{cloud_name}/image/upload/{transform}/v1/{public_id}.webp"
+            return f"https://res.cloudinary.com/{cloud_name}/image/upload/{transform}/v1/{public_id}.avif"
 
         return image_url
     except Exception as e:
