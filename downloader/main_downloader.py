@@ -970,8 +970,6 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             "-o",
             download_path_template,
             "--newline",
-            "--progress-template",
-            "download:[%(progress._percent_str)s]",
         ]
     )
 
@@ -1002,52 +1000,48 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
 
         last_db_update = 0
 
-        # قراءة المخرجات بشكل غير متزامن واستخراج البيانات الحيوية
+        # قراءة المخرجات واستخراج البيانات الكاملة (المرونة القصوى)
         while True:
             line = await process.stdout.readline()
-            if not line:
-                break
-
+            if not line: break
             line_str = line.decode().strip()
 
-            # 1. استخراج الحجم والنسبة لـ tqdm
-            size_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*of\s*(\d+(?:\.\d+)?)(MiB|GiB|KiB|B)", line_str)
-            if size_match:
-                percent = float(size_match.group(1))
-                total_val = float(size_match.group(2))
-                unit = size_match.group(3)
-                
-                # تحويل الحجم لبايت لتنسيق tqdm
+            # 1. استخراج النسبة والحجم الكلي لـ tqdm
+            # نمط يدعم: 10.5% of 100.00MiB
+            progress_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*of\s*(\d+(?:\.\d+)?)\s*(KiB|MiB|GiB|B)", line_str)
+            if progress_match:
+                percent = float(progress_match.group(1))
+                total_val = float(progress_match.group(2))
+                unit = progress_match.group(3)
                 mult = {"GiB": 1024**3, "MiB": 1024**2, "KiB": 1024, "B": 1}.get(unit, 1024**2)
                 
-                if pbar_dl.total == 0:
+                if pbar_dl.total == 0 or pbar_dl.total != total_val * mult:
                     pbar_dl.total = total_val * mult
-                
                 pbar_dl.n = (percent / 100) * pbar_dl.total
                 pbar_dl.refresh()
 
-            # 2. تحديث سوبابيز بالسرعة والوقت المتبقي كل 3 ثواني
+            # 2. تحديث قاعدة البيانات بالسرعة والوقت المتبقي كل 3 ثواني
             if task_id and (time.time() - last_db_update > 3):
-                speed_match = re.search(r"at\s+([\d\.]+\w+/s)", line_str)
+                speed_match = re.search(r"at\s+([\d\.]+(?:k|M|G)?B/s)", line_str)
                 eta_match = re.search(r"ETA\s+([\d:]+)", line_str)
                 
-                speed_str = speed_match.group(1) if speed_match else "Downloading..."
-                status_msg = f"📥 تحميل: {int(percent) if 'percent' in locals() else 0}%"
-                if eta_match: status_msg += f" (متبقي {eta_match.group(1)})"
+                percent_now = int(percent) if 'percent' in locals() else 0
+                speed_now = speed_match.group(1) if speed_match else "Downloading..."
+                status_txt = f"📥 جاري التحميل: {percent_now}%"
+                if eta_match: status_txt += f" (متبقي {eta_match.group(1)})"
 
                 try:
                     supabase.table("download_tasks").update({
-                        "progress_percent": int(percent) if 'percent' in locals() else 0,
-                        "status_message": status_msg,
-                        "download_speed": speed_str,
+                        "progress_percent": percent_now,
+                        "status_message": status_txt,
+                        "download_speed": speed_now,
                         "status": "processing"
                     }).eq("id", task_id).execute()
                     last_db_update = time.time()
-                except:
-                    pass
+                except: pass
 
-            # 3. طباعة الأخطاء فقط
-            if any(word in line_str.upper() for word in ["ERROR", "WARNING", "FAILED"]):
+            # 3. فلترة الطباعة: أخطاء فقط
+            if any(x in line_str.upper() for x in ["ERROR", "WARNING", "FAILED"]):
                 print(f"⚠️ ALERT_LOG: {line_str}")
 
         # الانتظار الحقيقي والمطلق لانتهاء العملية
