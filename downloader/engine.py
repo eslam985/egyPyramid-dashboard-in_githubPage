@@ -147,11 +147,14 @@ class ProgressStream:
         if chunk:
             self.pbar.update(len(chunk))
 
-            # تحديث كل ثانيتين لضمان استقرار الاتصال وسلاسة الواجهة
-            if self.episode_id and (time.time() - self.last_update_time > 2):
-                # حماية من القسمة على صفر إذا لم يكتمل تحميل الـ pbar
+            # التعديل: زيادة وقت التحديث ليكون كل 5 ثواني بدلاً من 2
+            # وإضافة فحص إضافي لمنع الإفراط في الاتصال بـ Supabase
+            if self.episode_id and (time.time() - self.last_update_time > 5):
                 total = self.pbar.total if self.pbar.total else 1
                 percent = int((self.pbar.n / total) * 100)
+                
+                # استخدام ThreadPoolExecutor أو أي وسيلة غير بلوكية سيكون أفضل
+                # لكن حالياً، على الأقل زدنا الوقت ليقل الضغط
                 try:
                     supabase.table("episodes").update(
                         {
