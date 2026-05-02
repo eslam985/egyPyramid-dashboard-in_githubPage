@@ -10,11 +10,13 @@ from bidi.algorithm import get_display
 import subprocess
 from internetarchive import upload as archive_upload
 from urllib.parse import urlparse
+
 try:
     from .logger_setup import get_beast_logger
 except ImportError:
     import sys
     import os
+
     sys.path.append(os.path.dirname(__file__))
     from logger_setup import get_beast_logger
 # استدعاء اللوجر باسم المشروع
@@ -40,6 +42,7 @@ from .engine import (
     ProgressStream,
     send_to_telegram,
 )
+
 log = get_beast_logger("GuardianUltra")
 
 # 3. تنظيف استيراد سوبابيز
@@ -622,10 +625,12 @@ async def get_mixdrop_direct_link(embed_url):
 
                     # --- ⚡ تعديل الـ Reload الذكي ⚡ ---
                     if i == 5:
-                        log.info("🔄 الموقع يبدو متجمداً.. جاري إعادة تحميل الصفحة (Reload) للتنشيط...")
+                        log.info(
+                            "🔄 الموقع يبدو متجمداً.. جاري إعادة تحميل الصفحة (Reload) للتنشيط..."
+                        )
                         await page.reload(wait_until="domcontentloaded")
                         await page.wait_for_timeout(3000)
-                        continue 
+                        continue
                     # ----------------------------------
 
                     try:
@@ -641,20 +646,19 @@ async def get_mixdrop_direct_link(embed_url):
                     # ----------------------------------
 
                     await page.bring_to_front()
-                    
+
                     # فحص الرابط المباشر - صيد الدومينات الفرعية الجديدة
                     href = await page.get_attribute(btn_selector, "href")
-                    
+
                     if href and href.startswith("http"):
                         # فحص ذكي: هل الرابط يحتوي على كلمة mxcontent (بأي شكل) أو ليس له علاقة بـ mixdrop؟
-                        is_valid_direct = (
-                            "mxcontent" in href or 
-                            (not ("?download" in href or "mixdrop" in href))
+                        is_valid_direct = "mxcontent" in href or (
+                            not ("?download" in href or "mixdrop" in href)
                         )
-                        
+
                         if is_valid_direct:
                             log.info(f"✅ تم صيد الرابط بنجاح: {href[:60]}...")
-                            
+
                             await browser.close()
                             return href
 
@@ -1004,7 +1008,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             unit_divisor=1024,
             # التعديل الجذري: إزالة الألوان المسببة للرموز الغريبة وتوسيع الشريط
             bar_format="{desc}: {percentage:3.0f}% |{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
-            ascii=True, # استخدام التنسيق القياسي لضمان الوضوح التام
+            ascii=True,  # استخدام التنسيق القياسي لضمان الوضوح التام
         )
 
         last_db_update = 0
@@ -1012,18 +1016,24 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         # قراءة المخرجات واستخراج البيانات الكاملة (المرونة القصوى)
         while True:
             line = await process.stdout.readline()
-            if not line: break
+            if not line:
+                break
             line_str = line.decode().strip()
 
             # 1. استخراج النسبة والحجم الكلي لـ tqdm
             # نمط يدعم: 10.5% of 100.00MiB
-            progress_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*of\s*(\d+(?:\.\d+)?)\s*(KiB|MiB|GiB|B)", line_str)
+            progress_match = re.search(
+                r"(\d+(?:\.\d+)?)\s*%\s*of\s*(\d+(?:\.\d+)?)\s*(KiB|MiB|GiB|B)",
+                line_str,
+            )
             if progress_match:
                 percent = float(progress_match.group(1))
                 total_val = float(progress_match.group(2))
                 unit = progress_match.group(3)
-                mult = {"GiB": 1024**3, "MiB": 1024**2, "KiB": 1024, "B": 1}.get(unit, 1024**2)
-                
+                mult = {"GiB": 1024**3, "MiB": 1024**2, "KiB": 1024, "B": 1}.get(
+                    unit, 1024**2
+                )
+
                 if pbar_dl.total == 0 or pbar_dl.total != total_val * mult:
                     pbar_dl.total = total_val * mult
                 pbar_dl.n = (percent / 100) * pbar_dl.total
@@ -1033,21 +1043,25 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             if task_id and (time.time() - last_db_update > 3):
                 speed_match = re.search(r"at\s+([\d\.]+(?:k|M|G)?B/s)", line_str)
                 eta_match = re.search(r"ETA\s+([\d:]+)", line_str)
-                
-                percent_now = int(percent) if 'percent' in locals() else 0
+
+                percent_now = int(percent) if "percent" in locals() else 0
                 speed_now = speed_match.group(1) if speed_match else "Downloading..."
                 status_txt = f"📥 جاري التحميل: {percent_now}%"
-                if eta_match: status_txt += f" (متبقي {eta_match.group(1)})"
+                if eta_match:
+                    status_txt += f" (متبقي {eta_match.group(1)})"
 
                 try:
-                    supabase.table("download_tasks").update({
-                        "progress_percent": percent_now,
-                        "status_message": status_txt,
-                        "download_speed": speed_now,
-                        "status": "processing"
-                    }).eq("id", task_id).execute()
+                    supabase.table("download_tasks").update(
+                        {
+                            "progress_percent": percent_now,
+                            "status_message": status_txt,
+                            "download_speed": speed_now,
+                            "status": "processing",
+                        }
+                    ).eq("id", task_id).execute()
                     last_db_update = time.time()
-                except: pass
+                except:
+                    pass
 
             # 3. فلترة الطباعة: أخطاء فقط
             if any(x in line_str.upper() for x in ["ERROR", "WARNING", "FAILED"]):
@@ -1202,14 +1216,18 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     videos.append(full_p)
 
         videos.sort()
-        log.debug(f"DEBUG: الملفات الموجودة في المجلد حالياً: {os.listdir(extract_dir)}")
+        log.debug(
+            f"DEBUG: الملفات الموجودة في المجلد حالياً: {os.listdir(extract_dir)}"
+        )
         if not videos:
             log.error("❌ لم يتم العثور على فيديوهات!")
             return
 
         # --- ⚡ التعديل الجوهري: تحويل المسار لو اكتشفنا أكتر من حلقة ⚡ ---
         if len(videos) > 1:
-            log.info(f"🎊 كنز! تم اكتشاف {len(videos)} حلقة. جاري إعادة توزيع المهام...")
+            log.info(
+                f"🎊 كنز! تم اكتشاف {len(videos)} حلقة. جاري إعادة توزيع المهام..."
+            )
 
             new_task_list = []
             for vid in videos:
@@ -1444,14 +1462,16 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 try:
                     archive_upload(
                         identifier,
-                        files={final_file_name: stream}, # 👈 التعديل هنا: استخدم stream وليس f_data
+                        files={
+                            final_file_name: stream
+                        },  # 👈 التعديل هنا: استخدم stream وليس f_data
                         metadata={"title": episode_label, "mediatype": "movies"},
                         access_key=ARCHIVE_ACCESS_KEY,
                         secret_key=ARCHIVE_SECRET_KEY,
                         verbose=False,
                     )
                 finally:
-                    stream.close() # التأكد من إغلاق الملف بعد الرفع
+                    stream.close()  # التأكد من إغلاق الملف بعد الرفع
                 stream.close()
                 pbar_archive.close()
                 archive_url = f"https://archive.org/download/{identifier}/{final_file_name}"  # Get the archive URL after successful upload
@@ -1839,6 +1859,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         if os.path.exists(extract_dir):
             shutil.rmtree(extract_dir)
         log.info(f"\n✨ المهمة انتهت بنجاح!")
+        time.sleep(30)  # انتظار 20 ثانية قبل الاغلاق
 
 
 async def run_pyramid_tasks(task_list):
