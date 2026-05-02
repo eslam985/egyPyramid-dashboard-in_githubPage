@@ -40,6 +40,7 @@ from .engine import (
     ProgressStream,
     send_to_telegram,
 )
+log = get_beast_logger("GuardianUltra")
 
 # 3. تنظيف استيراد سوبابيز
 try:
@@ -72,7 +73,6 @@ st_key = os.getenv("STREAMTAPE_KEY")
 mix_user = os.getenv("MIXDROP_EMAIL")
 mix_key = os.getenv("MIXDROP_API_KEY")
 
-log = get_beast_logger("GuardianUltra")
 
 def save_to_supabase(
     current_voe,
