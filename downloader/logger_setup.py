@@ -1,13 +1,15 @@
+import logging  # 👈 هذا هو السطر الناقص الذي تسبب في الـ NameError
+import os
+from datetime import datetime
+
 def get_beast_logger(name="TheBeast"):
     log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     date_format = "%I:%M:%S %p"
 
+    # الآن سيعرف بايثون ما هو logging
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
-
-    # 🟢 السطر السحري المنقذ 🟢
-    # هذا السطر يمنع إرسال الرسائل للوجر الأساسي في كولاب، فيختفي التكرار فوراً
-    logger.propagate = False
+    logger.propagate = False 
 
     if not logger.handlers:
         c_handler = logging.StreamHandler()
