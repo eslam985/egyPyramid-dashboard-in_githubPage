@@ -4,7 +4,9 @@ from datetime import datetime
 
 
 def get_beast_logger(name="TheBeast"):
-    log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    # إضافة سطر جديد وفواصل منقطة بعد كل رسالة آلياً
+    log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s\n" + "—" * 60
+    
     date_format = "%I:%M:%S %p"
 
     # الآن بايثون سيفهم ما هو logging
