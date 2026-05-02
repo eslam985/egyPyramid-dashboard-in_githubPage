@@ -993,10 +993,9 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             unit="B",
             unit_scale=True,
             unit_divisor=1024,
-            # التعديل: حذفنا ncols اليدوية واستخدمنا التنسيق التلقائي لضمان وجود فراغ
-            bar_format="{desc}: {percentage:3.0f}% |{bar:30}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
-            ascii=" #█", # إضافة المسافة قبل الهاشتاج تجعل الجزء الفارغ يظهر بوضوح
-            colour="green",
+            # التعديل الجذري: إزالة الألوان المسببة للرموز الغريبة وتوسيع الشريط
+            bar_format="{desc}: {percentage:3.0f}% |{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+            ascii=True, # استخدام التنسيق القياسي لضمان الوضوح التام
         )
 
         last_db_update = 0
