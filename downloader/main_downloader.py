@@ -993,7 +993,9 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             unit="B",
             unit_scale=True,
             unit_divisor=1024,
-            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+            # أضفناncols=100 لزيادة العرض و {rate_noinv_fmt} لتنسيق أفضل للسرعة
+            bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+            ncols=900, # هذا الرقم سيجبره على التمدد بعرض منطقة العمل في كولاب
             ascii=" █",
             colour="green",
         )
