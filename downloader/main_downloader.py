@@ -1431,25 +1431,24 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     ascii=" █",  # استبدال الهاشتاج بمربعات ناعمة
                     colour="green",  # اختيار لون الشريط (يعمل في كولاب)
                 )
-                # التأكد أننا نفتح الملف المحلي الموجود في vid_path فعلياً
-                # التعديل: نضمن أن اسم الملف داخل الأرشيف هو اسم الفيلم وليس الرابط أو اسم عشوائي
-                # بدلاً من استخدام clean_name، سنستخدم نفس هيكلة الـ IDs لاسم الملف
-                final_file_name = f"vid__{media_id}_{e_id}_{idx}.mp4"
 
-                # استبدل بلوك الـ with open بهذا:
+                final_file_name = f"vid__{media_id}_{e_id}_{idx}.mp4"
+                # 1. إنشاء الـ stream وربطه بملف الفيديو
                 stream = ProgressStream(vid_path, pbar_archive, episode_id=e_id)
 
-                # بدل تمرير stream مباشرة، مررنا f_data اللي هو ملف خام 100%
-                # مع الحفاظ على الـ stream شغال عشان الشريط الأخضر
-                with open(vid_path, "rb") as f_data:
+                # 2. تمرير الـ stream مباشرة لمكتبة الرفع
+                # الـ stream الآن هو "المخبر" الذي يخبر pbar بكل بايت يخرج
+                try:
                     archive_upload(
                         identifier,
-                        files={final_file_name: f_data},  # الرفع من الملف الخام
+                        files={final_file_name: stream}, # 👈 التعديل هنا: استخدم stream وليس f_data
                         metadata={"title": episode_label, "mediatype": "movies"},
                         access_key=ARCHIVE_ACCESS_KEY,
                         secret_key=ARCHIVE_SECRET_KEY,
                         verbose=False,
                     )
+                finally:
+                    stream.close() # التأكد من إغلاق الملف بعد الرفع
                 stream.close()
                 pbar_archive.close()
                 archive_url = f"https://archive.org/download/{identifier}/{final_file_name}"  # Get the archive URL after successful upload
