@@ -10,8 +10,13 @@ from bidi.algorithm import get_display
 import subprocess
 from internetarchive import upload as archive_upload
 from urllib.parse import urlparse
-import logging 
-from logger_setup import get_beast_logger
+try:
+    from .logger_setup import get_beast_logger
+except ImportError:
+    import sys
+    import os
+    sys.path.append(os.path.dirname(__file__))
+    from logger_setup import get_beast_logger
 # استدعاء اللوجر باسم المشروع
 from .processors import (
     tqdm,
