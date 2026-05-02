@@ -10,10 +10,9 @@ from bidi.algorithm import get_display
 import subprocess
 from internetarchive import upload as archive_upload
 from urllib.parse import urlparse
-
+import logging 
 from logger_setup import get_beast_logger
 # استدعاء اللوجر باسم المشروع
-log = get_beast_logger("GuardianUltra")
 from .processors import (
     tqdm,
     normalize_title,
@@ -68,6 +67,7 @@ st_key = os.getenv("STREAMTAPE_KEY")
 mix_user = os.getenv("MIXDROP_EMAIL")
 mix_key = os.getenv("MIXDROP_API_KEY")
 
+log = get_beast_logger("GuardianUltra")
 
 def save_to_supabase(
     current_voe,
