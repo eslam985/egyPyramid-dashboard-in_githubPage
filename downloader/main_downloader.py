@@ -10,6 +10,7 @@ from bidi.algorithm import get_display
 import subprocess
 from internetarchive import upload as archive_upload
 from urllib.parse import urlparse
+
 from logger_setup import get_beast_logger
 # استدعاء اللوجر باسم المشروع
 log = get_beast_logger("GuardianUltra")
