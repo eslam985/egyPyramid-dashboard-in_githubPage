@@ -990,17 +990,19 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         )  # لضمان عملها بشكل تفاعلي في كولاب
 
         pbar_dl = tqdm_notebook(
-            total=100,
+            total=0,
             desc=f"📥 جاري التحميل: {display_title[:20]}",
-            unit="%",
-            bar_format="{l_bar}{bar}{r_bar}",  # تنسيق نظيف بدون تعقيد
-            ascii=" █",  # استبدال الهاشتاج بمربعات ناعمة
-            colour="green",  # اختيار لون الشريط (يعمل في كولاب)
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+            ascii=" █",
+            colour="green",
         )
 
         last_db_update = 0
 
-        # قراءة المخرجات بشكل غير متزامن (مستحيل يهرب للسطر اللي بعده)
+        # قراءة المخرجات بشكل غير متزامن واستخراج البيانات الحيوية
         while True:
             line = await process.stdout.readline()
             if not line:
@@ -1008,47 +1010,45 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
 
             line_str = line.decode().strip()
 
-            # كود الفلترة الذكي:
-            # لا تطبع السطر إذا كان يحتوي على نسبة مئوية (تحميل عادي)
-            # واطبعه فقط إذا احتوى على كلمة ERROR أو Warning أو تعطل
-            is_progress = re.search(r"\d+(?:\.\d+)?%", line_str)
-
-            if (
-                not is_progress
-                or "ERROR" in line_str.upper()
-                or "WARNING" in line_str.upper()
-            ):
-                # هنا بنطبع فقط لو مفيش نسبة مئوية (يعني مش تحميل)
-                # أو لو السطر فيه تنبيه صريح بمشكلة
-                if any(
-                    word in line_str.upper()
-                    for word in ["ERROR", "WARNING", "FAILED", "HTTP ERROR"]
-                ):
-                    print(f"⚠️ ALERT_LOG: {line_str}")
-
-            # استخراج النسبة
-            match = re.search(r"(\d+(?:\.\d+)?)%", line_str)
-            if match:
-                current_percent = float(match.group(1))
-                pbar_dl.n = current_percent
+            # 1. استخراج الحجم والنسبة لـ tqdm
+            size_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*of\s*(\d+(?:\.\d+)?)(MiB|GiB|KiB|B)", line_str)
+            if size_match:
+                percent = float(size_match.group(1))
+                total_val = float(size_match.group(2))
+                unit = size_match.group(3)
+                
+                # تحويل الحجم لبايت لتنسيق tqdm
+                mult = {"GiB": 1024**3, "MiB": 1024**2, "KiB": 1024, "B": 1}.get(unit, 1024**2)
+                
+                if pbar_dl.total == 0:
+                    pbar_dl.total = total_val * mult
+                
+                pbar_dl.n = (percent / 100) * pbar_dl.total
                 pbar_dl.refresh()
 
-                # تحديث سوبابيز كل 3 ثواني
-                if task_id and (time.time() - last_db_update > 3):
-                    speed_match = re.search(r"(\d+\.?\d+\w+/s)", line_str)
-                    speed_str = (
-                        speed_match.group(1) if speed_match else "Downloading..."
-                    )
+            # 2. تحديث سوبابيز بالسرعة والوقت المتبقي كل 3 ثواني
+            if task_id and (time.time() - last_db_update > 3):
+                speed_match = re.search(r"at\s+([\d\.]+\w+/s)", line_str)
+                eta_match = re.search(r"ETA\s+([\d:]+)", line_str)
+                
+                speed_str = speed_match.group(1) if speed_match else "Downloading..."
+                status_msg = f"📥 تحميل: {int(percent) if 'percent' in locals() else 0}%"
+                if eta_match: status_msg += f" (متبقي {eta_match.group(1)})"
 
-                    supabase.table("download_tasks").update(
-                        {
-                            "progress_percent": int(current_percent),
-                            "status_message": f"📥 جاري التحميل: {int(current_percent)}%",
-                            "download_speed": speed_str,
-                            "status": "processing",
-                        }
-                    ).eq("id", task_id).execute()
+                try:
+                    supabase.table("download_tasks").update({
+                        "progress_percent": int(percent) if 'percent' in locals() else 0,
+                        "status_message": status_msg,
+                        "download_speed": speed_str,
+                        "status": "processing"
+                    }).eq("id", task_id).execute()
                     last_db_update = time.time()
+                except:
+                    pass
+
+            # 3. طباعة الأخطاء فقط
+            if any(word in line_str.upper() for word in ["ERROR", "WARNING", "FAILED"]):
+                print(f"⚠️ ALERT_LOG: {line_str}")
 
         # الانتظار الحقيقي والمطلق لانتهاء العملية
         # الانتظار الحقيقي والمطلق لانتهاء العملية
