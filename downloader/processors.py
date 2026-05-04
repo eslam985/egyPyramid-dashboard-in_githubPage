@@ -12,6 +12,12 @@ from functools import partial
 from .engine import ProgressStream
 import traceback
 
+try:
+    from .logger_setup import get_beast_logger
+except ImportError:
+    import sys
+    import os
+log = get_beast_logger("GuardianUltra")
 # 1. استيراد القاعدة الأساسية أولاً
 try:
     from tqdm.auto import tqdm as tqdm_base
@@ -625,12 +631,23 @@ async def upload_to_voe_api(file_path, identifier):
                 remote_url = f"https://archive.org/download/{identifier}/{file_name}"
             params = {"key": VOE_API_KEY, "url": remote_url}
 
-            # 1. طلب الرفع
-            response = await client.get(
-                "https://voe.sx/api/upload/url", params=params, timeout=30
-            )
-            res = response.json()
+            # 1. طلب الرفع مع محاولات إعادة في حال تذبذب الرابط
+            res = {}
+            for attempt in range(3):
+                try:
+                    response = await client.get(
+                        "https://voe.sx/api/upload/url", params=params, timeout=30
+                    )
+                    res = response.json()
+                    if res.get("status") == 200:
+                        break
+                except Exception as e:
+                    log.warning(f"⚠️ Voe: فشل اتصال في المحاولة {attempt+1}: {e}")
+                
+                await asyncio.sleep(5)
+
             if res.get("status") != 200:
+                log.error(f"❌ Voe: فشل الرفع نهائياً: {res}")
                 return None
 
             file_code = res.get("result", {}).get("file_code")
@@ -732,6 +749,7 @@ async def upload_to_doodstream(api_key, identifier, file_name):
                     print(f"✅ DoodStream: تم قبول الأمر عبر {domain}")
                     break
             except Exception:
+                await asyncio.sleep(2) # انتظار بسيط قبل تجربة نطاق آخر
                 continue
 
         if not data or (data.get("msg") != "OK" and not data.get("success")):
@@ -821,8 +839,19 @@ async def upload_to_streamtape(login, key, identifier, file_name):
             # نقوم بعمل quote للاسم لضمان وصول الحروف العربية للسيرفر بشكل سليم
             safe_name = urllib.parse.quote(file_name)
             add_url = f"https://api.streamtape.com/remotedl/add?login={login}&key={key}&url={remote_url}&name={safe_name}"
-            res = await client.get(add_url)
-            data = res.json()
+            # محاولة قنص الرابط مع إعادة المحاولة في حال تذبذب البوت
+            data = {}  # تعريف أولي فارغ
+            for attempt in range(3):
+                try:
+                    res = await client.get(add_url)
+                    data = res.json()
+                    if data.get("status") == 200:
+                        break
+                except Exception as e:
+                    log.warning(f"⚠️ خطأ في الاتصال: {e}")
+
+                log.warning(f"⚠️ محاولة فاشلة ({attempt+1}/3)...")
+                await asyncio.sleep(5)
 
             # التأكد من قبول السيرفر للأمر
             # التأكد من قبول السيرفر للأمر
@@ -921,15 +950,25 @@ async def upload_to_lulustream(key, identifier, file_name):
 
         async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
             add_url = f"{base_api}/upload/url?key={key}&url={urllib.parse.quote(remote_url, safe='')}"
-            res = await client.get(add_url)
 
-            if res.status_code != 200:
-                print(f"❌ خطأ اتصال (Code {res.status_code}): {res.text}")
-                return None
+            data = {}
+            for attempt in range(3):
+                try:
+                    res = await client.get(add_url)
+                    if res.status_code == 200:
+                        data = res.json()
+                        if data.get("status") == 200:
+                            break
+                    log.warning(
+                        f"⚠️ LuluStream: محاولة فاشلة ({attempt+1}/3).. الرمز: {res.status_code}"
+                    )
+                except Exception as e:
+                    log.warning(f"⚠️ LuluStream: خطأ اتصال: {e}")
 
-            data = res.json()
+                await asyncio.sleep(5)
+
             if data.get("status") != 200:
-                print(f"❌ رفض السيرفر الطلب: {data}")
+                print(f"❌ LuluStream: فشل الطلب نهائياً بعد المحاولات: {data}")
                 return None
 
             file_code = data["result"].get("filecode")

@@ -1595,7 +1595,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     )
 
                 log.info(f"📡 القيمة المرسلة لمهام الرفع: {remote_source}")
-
+                
                 await asyncio.sleep(10)
                 # 1. تحضير مهام الريموت باستخدام المصدر المتاح (أرشيف أو تليجرام)
                 if remote_source:
