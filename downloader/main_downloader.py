@@ -1308,7 +1308,8 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     f"[txt2][logo_bright]overlay=W-w-20:20[outv]"
                     f'" '  # قفلنا الفلتر كومبلكس هنا
                     f'-map "[outv]" -map 0:a '  # سحبنا الصوت الأصلي (0:a) كما هو لضمان التزامن 100%
-                    f"-c:v libx264 -preset superfast -crf 24 -maxrate 2.1M -bufsize 4.2M -pix_fmt yuv420p "
+                    f"-c:v libx264 -preset ultrafast -crf 26 -maxrate 1.8M -bufsize 3.6M -threads 0 -pix_fmt yuv420p "
+                    
                     f'-c:a aac -b:a 128k -ar 44100 "{disguised_file}"'
                 )
 
