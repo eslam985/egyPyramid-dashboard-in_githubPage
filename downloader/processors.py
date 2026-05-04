@@ -736,9 +736,9 @@ async def upload_to_doodstream(api_key, identifier, file_name):
         print(f"🔍 DoodStream Task ID: {f_code}")
 
         # محاولات الفحص (نزيد الوقت قليلاً لضمان عدم الحظر)
-        for i in range(1, 51):
+        for i in range(1, 21):
             await asyncio.sleep(20)  # 15 ثانية وقت مثالي للملفات الصغيرة
-            print(f"🔄 DoodStream Polling Attempt {i}/50...")
+            print(f"🔄 DoodStream Polling Attempt {i}/20...")
 
             for domain in api_domains:
                 try:
@@ -826,9 +826,9 @@ async def upload_to_streamtape(login, key, identifier, file_name):
 
                 target = clean_it(file_name.split(".")[0])
 
-                for i in range(1, 51):
+                for i in range(1, 21):
                     await asyncio.sleep(20)
-                    print(f"🔄 Streamtape Polling Attempt {i}/50...")
+                    print(f"🔄 Streamtape Polling Attempt {i}/20...")
 
                     # 1. الفحص المباشر عبر الـ ID (الأولوية القصوى حسب الديكومنتيشن)
                     try:

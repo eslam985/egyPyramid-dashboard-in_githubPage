@@ -1572,10 +1572,14 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                         }
                     ).eq("id", e_id).execute()
                 # --- ⚡ التحول للحل البديل (Telegram Fallback) ⚡ ---
-                # 1. تحديد المصدر الأولي
-                # تحديد مصدر الرفع (نفس منطق النسخة المستقرة)
+                if not (archive_url and "archive.org" in archive_url):
+                    retry_wait = 0
+                    while not telegram_direct and retry_wait < 5:
+                        log.info(f"⏳ انتظار رابط تليجرام.. محاولة {retry_wait+1}")
+                        await asyncio.sleep(5)
+                        retry_wait += 1
+
                 if archive_url and "archive.org" in archive_url:
-                    # بنبعت الـ identifier بس لأن دالات الرفع بتركب الرابط من عندها
                     remote_source = identifier
                     log.info(f"✅ المصدر المعتمد للرفع: Archive.org ({identifier})")
                 elif telegram_direct:
@@ -1588,7 +1592,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     log.error(
                         "❌ خطأ قاتل: لا يوجد مصدر (أرشيف أو تليجرام) للرفع المتوازي!"
                     )
-                # طباعة للتأكد من قيمة المصدر قبل الإرسال
+
                 log.info(f"📡 القيمة المرسلة لمهام الرفع: {remote_source}")
 
                 await asyncio.sleep(10)
