@@ -1309,7 +1309,6 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     f'" '  # قفلنا الفلتر كومبلكس هنا
                     f'-map "[outv]" -map 0:a '  # سحبنا الصوت الأصلي (0:a) كما هو لضمان التزامن 100%
                     f"-c:v libx264 -preset ultrafast -crf 26 -maxrate 1.8M -bufsize 3.6M -threads 0 -pix_fmt yuv420p "
-                    
                     f'-c:a aac -b:a 128k -ar 44100 "{disguised_file}"'
                 )
 
@@ -1415,9 +1414,15 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             episode_label = (
                 f"{loop_display_title}" if len(videos) == 1 else f"{loop_display_title}"
             )
-            identifier = f"egy-pyr-{media_id}-{e_id}-{idx}".replace("_", "-").replace(
-                " ", "-"
+            import random
+            import string
+
+            # توليد 4 رموز عشوائية فقط لكسر "بصمة" الاسم مع الحفاظ على أرقامك
+            rand_id = "".join(
+                random.choices(string.ascii_lowercase + string.digits, k=4)
             )
+            # المعرف الجديد يجمع بين الرمز العشوائي وقيمك الأساسية
+            identifier = f"v{rand_id}-{media_id}-{e_id}-{idx}"
             # --- تعريف مفاتيح السيرفرات (يجب أن تكون هنا داخل اللوب أو الدالة) ---
 
             # 3. الرفع للأرشيف (بالاسم النظيف)
@@ -1454,7 +1459,8 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     colour="green",  # اختيار لون الشريط (يعمل في كولاب)
                 )
 
-                final_file_name = f"vid__{media_id}_{e_id}_{idx}.mp4"
+                # اسم ملف مشفر تماماً
+                final_file_name = f"f_{media_id}_{e_id}_{idx}.mp4"
                 # 1. إنشاء الـ stream وربطه بملف الفيديو
                 stream = ProgressStream(vid_path, pbar_archive, episode_id=e_id)
 
@@ -1466,7 +1472,12 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                         files={
                             final_file_name: stream
                         },  # 👈 التعديل هنا: استخدم stream وليس f_data
-                        metadata={"title": episode_label, "mediatype": "movies"},
+                        # إخفاء اسم الفيلم من البيانات الوصفية (Metadata)
+                        metadata={
+                            "title": f"M-{media_id}-E{e_id}",
+                            "mediatype": "movies",
+                            "description": f"Internal ID: {media_id}_{e_id}_{idx}",
+                        },
                         access_key=ARCHIVE_ACCESS_KEY,
                         secret_key=ARCHIVE_SECRET_KEY,
                         verbose=False,
@@ -1595,7 +1606,7 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                     )
 
                 log.info(f"📡 القيمة المرسلة لمهام الرفع: {remote_source}")
-                
+
                 await asyncio.sleep(10)
                 # 1. تحضير مهام الريموت باستخدام المصدر المتاح (أرشيف أو تليجرام)
                 if remote_source:
