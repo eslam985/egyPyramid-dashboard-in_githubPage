@@ -1422,8 +1422,8 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 random.choices(string.ascii_lowercase + string.digits, k=4)
             )
             # المعرف الجديد يجمع بين الرمز العشوائي وقيمك الأساسية
-            identifier = f"v{rand_id}-{media_id}-{e_id}-{idx}"
-            # --- تعريف مفاتيح السيرفرات (يجب أن تكون هنا داخل اللوب أو الدالة) ---
+            # تنسيق يدمج الأرقام بدون شرطات كثيرة لضمان القبول
+            identifier = f"v{rand_id}x{media_id}x{e_id}x{idx}"  # --- تعريف مفاتيح السيرفرات (يجب أن تكون هنا داخل اللوب أو الدالة) ---
 
             # 3. الرفع للأرشيف (بالاسم النظيف)
             # 3. الرفع للأرشيف
