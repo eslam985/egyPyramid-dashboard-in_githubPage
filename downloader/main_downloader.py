@@ -1428,78 +1428,81 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             # 3. الرفع للأرشيف (بالاسم النظيف)
             # 3. الرفع للأرشيف
             log.info(f"📦 أرشفة النسخة الكاملة: {episode_label}")
-            archive_url = "Failed_Archive_Upload"
+            #archive_url = "Failed_Archive_Upload"
+            archive_url = "Disabled" # تغيير القيمة الافتراضية
             try:
-                # --- أضف/عدل هذا الجزء هنا ---
-                if task_id:
-                    supabase.table("download_tasks").update(
-                        {
-                            "status_message": "☁️ جاري الأرشفة (النسخة الخام)...",
-                            "progress_percent": 92,
-                        }
-                    ).eq("id", task_id).execute()
-                # -------------------------
-                # تحديث الحالة للمتصفح: بدء الرفع للأرشيف
-                if e_id:
-                    supabase.table("episodes").update(
-                        {
-                            "status_message": "☁️ جاري الرفع للأرشيف (نسخة احتياطية)",
-                            "progress_percent": 0,  # تصفير العداد للبدء في حساب الرفع
-                        }
-                    ).eq("id", e_id).execute()
+                pass # إضافة pass لتجاوز هذا الجزء تماماً
+                # # --- أضف/عدل هذا الجزء هنا ---
+                # if task_id:
+                #     supabase.table("download_tasks").update(
+                #         {
+                #             "status_message": "☁️ جاري الأرشفة (النسخة الخام)...",
+                #             "progress_percent": 92,
+                #         }
+                #     ).eq("id", task_id).execute()
+                # # -------------------------
+                # # تحديث الحالة للمتصفح: بدء الرفع للأرشيف
+                # if e_id:
+                #     supabase.table("episodes").update(
+                #         {
+                #             "status_message": "☁️ جاري الرفع للأرشيف (نسخة احتياطية)",
+                #             "progress_percent": 0,  # تصفير العداد للبدء في حساب الرفع
+                #         }
+                #     ).eq("id", e_id).execute()
 
-                pbar_archive = tqdm(
-                    total=os.path.getsize(vid_path),
-                    desc=f"☁️ أرشيف (كامل)",
-                    unit="B",
-                    unit_scale=True,
-                    mininterval=3.0,  # تحديث كل 3 ثوانٍ فقط (مثالي للسرعات البطيئة في كولاب)
-                    maxinterval=10.0,
-                    ascii=" █",  # استبدال الهاشتاج بمربعات ناعمة
-                    colour="green",  # اختيار لون الشريط (يعمل في كولاب)
-                )
+                # pbar_archive = tqdm(
+                #     total=os.path.getsize(vid_path),
+                #     desc=f"☁️ أرشيف (كامل)",
+                #     unit="B",
+                #     unit_scale=True,
+                #     mininterval=3.0,  # تحديث كل 3 ثوانٍ فقط (مثالي للسرعات البطيئة في كولاب)
+                #     maxinterval=10.0,
+                #     ascii=" █",  # استبدال الهاشتاج بمربعات ناعمة
+                #     colour="green",  # اختيار لون الشريط (يعمل في كولاب)
+                # )
 
-                # اسم ملف مشفر تماماً
-                final_file_name = f"f_{media_id}_{e_id}_{idx}.mp4"
-                # 1. إنشاء الـ stream وربطه بملف الفيديو
-                stream = ProgressStream(vid_path, pbar_archive, episode_id=e_id)
-
-                # 2. تمرير الـ stream مباشرة لمكتبة الرفع
-                # الـ stream الآن هو "المخبر" الذي يخبر pbar بكل بايت يخرج
-                try:
-                    archive_upload(
-                        identifier,
-                        files={
-                            final_file_name: stream
-                        },  # 👈 التعديل هنا: استخدم stream وليس f_data
-                        # إخفاء اسم الفيلم من البيانات الوصفية (Metadata)
-                        metadata={
-                            "title": f"M-{media_id}-E{e_id}",
-                            "mediatype": "movies",
-                            "description": f"Internal ID: {media_id}_{e_id}_{idx}",
-                        },
-                        access_key=ARCHIVE_ACCESS_KEY,
-                        secret_key=ARCHIVE_SECRET_KEY,
-                        verbose=False,
-                    )
-                finally:
-                    stream.close()  # التأكد من إغلاق الملف بعد الرفع
-                stream.close()
-                pbar_archive.close()
-                archive_url = f"https://archive.org/download/{identifier}/{final_file_name}"  # Get the archive URL after successful upload
-                direct_download_url = (
-                    f"https://archive.org/download/{identifier}/{final_file_name}"
-                )
-                # حقن الرابط المباشر في قاعدة البيانات يدوياً
-                supabase.table("links").insert(
-                    {
-                        "episode_id": e_id,
-                        "url": direct_download_url,
-                        "server_name": "archive",
-                        "last_check_status": "valid",
-                    }
-                ).execute()
-                log.info(f"✅ تم ربط الرابط المباشر في سوبابيز: {direct_download_url}")
+                # # اسم ملف مشفر تماماً
+                # final_file_name = f"f_{media_id}_{e_id}_{idx}.mp4"
+                # # 1. إنشاء الـ stream وربطه بملف الفيديو
+                # stream = ProgressStream(vid_path, pbar_archive, episode_id=e_id)
+                # # 2. تمرير الـ stream مباشرة لمكتبة الرفع
+                # # الـ stream الآن هو "المخبر" الذي يخبر pbar بكل بايت يخرج
+               
+            #try:
+              
+                #     archive_upload(
+                #         identifier,
+                #         files={
+                #             final_file_name: stream
+                #         },  # 👈 التعديل هنا: استخدم stream وليس f_data
+                #         # إخفاء اسم الفيلم من البيانات الوصفية (Metadata)
+                #         metadata={
+                #             "title": f"M-{media_id}-E{e_id}",
+                #             "mediatype": "movies",
+                #             "description": f"Internal ID: {media_id}_{e_id}_{idx}",
+                #         },
+                #         access_key=ARCHIVE_ACCESS_KEY,
+                #         secret_key=ARCHIVE_SECRET_KEY,
+                #         verbose=False,
+                #     )
+                # finally:
+                #     stream.close()  # التأكد من إغلاق الملف بعد الرفع
+                # stream.close()
+                # pbar_archive.close()
+                # archive_url = f"https://archive.org/download/{identifier}/{final_file_name}"  # Get the archive URL after successful upload
+                # direct_download_url = (
+                #     f"https://archive.org/download/{identifier}/{final_file_name}"
+                # )
+                # # حقن الرابط المباشر في قاعدة البيانات يدوياً
+                # supabase.table("links").insert(
+                #     {
+                #         "episode_id": e_id,
+                #         "url": direct_download_url,
+                #         "server_name": "archive",
+                #         "last_check_status": "valid",
+                #     }
+                # ).execute()
+                # log.info(f"✅ تم ربط الرابط المباشر في سوبابيز: {direct_download_url}")
             except Exception as e:
                 log.error(f"❌ خطأ أرشيف: {e}")
 
