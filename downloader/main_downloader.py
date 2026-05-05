@@ -1430,6 +1430,8 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
             log.info(f"📦 أرشفة النسخة الكاملة: {episode_label}")
             #archive_url = "Failed_Archive_Upload"
             archive_url = "Disabled" # تغيير القيمة الافتراضية
+            final_file_name = f"f_{media_id}_{e_id}_{idx}.mp4"
+            
             try:
                 pass # إضافة pass لتجاوز هذا الجزء تماماً
                 # # --- أضف/عدل هذا الجزء هنا ---
@@ -1462,7 +1464,6 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 # )
 
                 # # اسم ملف مشفر تماماً
-                # final_file_name = f"f_{media_id}_{e_id}_{idx}.mp4"
                 # # 1. إنشاء الـ stream وربطه بملف الفيديو
                 # stream = ProgressStream(vid_path, pbar_archive, episode_id=e_id)
                 # # 2. تمرير الـ stream مباشرة لمكتبة الرفع
@@ -1589,10 +1590,10 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
                 # --- ⚡ التحول للحل البديل (Telegram Fallback) ⚡ ---
                 if not (archive_url and "archive.org" in archive_url):
                     retry_wait = 0
-                    while not telegram_direct and retry_wait < 5:
+                    while not telegram_direct and retry_wait < 2:
                         log.info(f"⏳ انتظار رابط تليجرام.. محاولة {retry_wait+1}")
                         await asyncio.sleep(5)
-                        retry_wait += 1
+                        retry_wait += 1 
 
                 if archive_url and "archive.org" in archive_url:
                     remote_source = identifier
