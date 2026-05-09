@@ -613,6 +613,14 @@ async def get_mixdrop_direct_link(embed_url):
 
         try:
             await page.goto(target_url, wait_until="domcontentloaded")
+
+            # --- 🔍 فحص هل الملف محذوف فعلياً من المصدر ---
+            page_content = await page.content()
+            if "can't find the file you are looking for" in page_content:
+                log.error("🚫 الرابط ميت: MixDrop بيقول We can't find the file")
+                await browser.close()
+                return "404_DELETED"
+
             btn_selector = "a.download-btn"
 
             # رفعنا المدى لـ 10 لضمان وجود محاولات كافية بعد الـ Reload
@@ -897,11 +905,6 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
     if not is_local_file:
         log.info(f"   🚀 [Direct Start] الرابط معتمد — جاري التحميل فوراً...")
 
-    # هنا ييجي كود الـ yt-dlp بتاعك مباشرة
-
-    # 1. جلب الهيدرز الذكية بناءً على الرابط الممرر للدالة
-    # --- 2. دمج المنطق داخل دالة التحميل الأساسية ---
-
     # 1. معالجة روابط VidTube/Lulu
     if "vidtube.one" in url or "cdn-tube" in url:
         log.info("🎯 تم اكتشاف رابط VidTube/Lulu.. جاري استخراج الرابط المباشر...")
@@ -912,10 +915,15 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
         else:
             log.warning("⚠️ فشل الصيد، سنحاول بالرابط الأصلي (قد يفشل).")
 
-    # 2. معالجة روابط MixDrop (باستخدام elif لزيادة الكفاءة)
+    # 2. معالجة روابط MixDrop
     elif "mixdrop" in url:
         log.info("🎯 تم اكتشاف رابط MixDrop.. جاري الصيد من صفحة التحميل...")
         direct_link = await get_mixdrop_direct_link(url)
+
+        if direct_link == "404_DELETED":
+            # رمي خطأ صريح لتشغيل نظام تنظيف الميديا (الذي أعددناه سابقاً)
+            raise Exception("الملف محذوف نهائياً من المصدر (MixDrop 404)")
+
         if direct_link:
             log.info(f"✅ تم صيد رابط MixDrop المباشر بنجاح.")
             url = direct_link
@@ -924,7 +932,6 @@ async def pyramid_ultimate_beast(url, name, task_id=None, meta_data=None):
 
     # الآن يكمل الكود بناء الـ cmd بالرابط الجديد (url)
     smart_headers = get_smart_headers(url)
-    # ... باقي كود بناء الـ cmd اللي عندك ...
 
     # 2. بناء أمر الوحش الموحد لضمان تجاوز الحماية في كل الحالات
     cmd = [
