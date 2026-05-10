@@ -1,4 +1,8 @@
 import os
+# --- إعدادات حماية تليجرام من الـ Flood ---
+os.environ["PYROGRAM_MAX_CONCURRENT_TRANSMISSIONS"] = "1"
+os.environ["PYROGRAM_SLEEP_THRESHOLD"] = "60"
+
 import time
 import re
 import shutil
@@ -15,7 +19,7 @@ try:
     from .logger_setup import get_beast_logger
 except ImportError:
     import sys
-    import os
+    import os   
 
     sys.path.append(os.path.dirname(__file__))
     from logger_setup import get_beast_logger
