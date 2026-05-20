@@ -1,3 +1,4 @@
+# /media/es/DDrive/projects/web-Veo/egyPyramid-dashboard-in_githubPage/services/supabase_db.py
 import os
 from typing import Optional, List, Tuple, Any
 from supabase import create_client, Client
@@ -115,3 +116,14 @@ class SupabaseService:
         else:
             result = SupabaseService.client.table("episodes").insert(ep_data).execute()
         return result.data
+    
+    
+    @staticmethod
+    def find_media_by_id(target_id: int):
+        try:
+            # استدعاء الـ function التي أنشأناها في SQL
+            response = SupabaseService.client.rpc("find_media_by_id", {"target_id": target_id}).execute()
+            return response.data
+        except Exception as e:
+            print(f"❌ Error in RPC: {str(e)}")
+            return []

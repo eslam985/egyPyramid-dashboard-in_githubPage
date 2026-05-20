@@ -1,28 +1,31 @@
 // src/services/api.js
 import axios from 'axios';
 
+// التعديل: استخدام متغير بيئي لسهولة التبديل بين التطوير والإنتاج
+const baseURL = import.meta.env.VITE_API_URL || '/api';
+// الرابط الصحيح للـ Space الخاص بك
 const api = axios.create({
-    baseURL: '/api'
+    baseURL: 'https://eslam315-egypyramid-guardian-ultra.hf.space'
 });
 
 // إضافة "مستمع" يضيف التوكن تلقائياً لكل طلب
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('user_token'); // التوكن الذي سيأتي بعد تسجيل الدخول
+    const token = localStorage.getItem('user_token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
-// في ملف api.js
+
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            // التوكن انتهى أو غير صالح
             localStorage.removeItem('user_token');
-            window.location.href = '/#/login'; // تحويل للـ login
+            window.location.href = '/#/login';
         }
         return Promise.reject(error);
     }
 );
+
 export default api;

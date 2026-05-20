@@ -135,6 +135,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     token = jwt.encode({"sub": form_data.username}, SECRET_KEY, algorithm="HS256")
     return {"access_token": token, "token_type": "bearer"}
 
+@app.get("/api/search/id/{media_id}")
+def search_by_id(media_id: int):
+    return SupabaseService.find_media_by_id(media_id)
 
 # 7. المسارات (الـ APIs توضع هنا...)
 # ... (ضع الـ @app.post والـ @app.get الخاصة بك هنا) ...
