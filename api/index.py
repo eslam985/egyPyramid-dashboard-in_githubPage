@@ -196,11 +196,12 @@ async def delete_media(media_id: int, user: str = Depends(authenticate)):
 
 
 # 1. عرف الموديل أولاً
+# 1. عرف الموديل أولاً مع Optional لكل الحقول
 class MediaUpdate(BaseModel):
-    title: str
-    story: str
-    category: str
-    poster_url: str
+    title: Optional[str] = None
+    story: Optional[str] = None
+    category: Optional[str] = None
+    poster_url: Optional[str] = None
     year: Optional[str] = None
     rating: Optional[str] = None
     tmdb_id: Optional[str] = None
