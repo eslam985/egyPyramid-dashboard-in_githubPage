@@ -1,3 +1,4 @@
+// /media/es/DDrive/projects/web-Veo/egyPyramid-dashboard-in_githubPage/src/services/supabase.js
 import { createClient } from '@supabase/supabase-js';
 
 // القراءة من السيكرتس لضمان الأمان

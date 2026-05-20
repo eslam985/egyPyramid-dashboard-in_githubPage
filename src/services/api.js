@@ -5,9 +5,8 @@ import axios from 'axios';
 const baseURL = import.meta.env.VITE_API_URL || '/api';
 // الرابط الصحيح للـ Space الخاص بك
 const api = axios.create({
-    baseURL: 'https://eslam315-egypyramid-guardian-ultra.hf.space'
+    baseURL: import.meta.env.VITE_API_URL || 'https://eslam315-egypyramid-guardian-ultra.hf.space' || 'http://localhost:8000'
 });
-
 // إضافة "مستمع" يضيف التوكن تلقائياً لكل طلب
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('user_token');

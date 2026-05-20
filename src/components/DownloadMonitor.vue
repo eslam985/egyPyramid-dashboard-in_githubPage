@@ -161,8 +161,38 @@ onMounted(async () => {
   }, 200); // هذا التأخير هو "المفتاح السحري"
 });
 
-onUnmounted(async () => {
-  await supabaseClient.removeAllChannels();
+// نحتاج لتعريف متغير للقناة خارج الـ onMounted لكي نتمكن من الوصول إليه في onUnmounted
+let channel;
+
+onMounted(async () => {
+  channel = supabaseClient.channel('tasks-monitor');
+
+  channel
+    .on(
+      'postgres_changes', 
+      { event: '*', schema: 'public', table: 'download_tasks' }, 
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          activeTasks.value.unshift(payload.new);
+        } else if (payload.eventType === 'UPDATE') {
+          const index = activeTasks.value.findIndex(t => t.id === payload.new.id);
+          if (index !== -1) {
+            activeTasks.value[index] = payload.new;
+          }
+        } else if (payload.eventType === 'DELETE') {
+          activeTasks.value = activeTasks.value.filter(t => t.id !== payload.old.id);
+        }
+      }
+    )
+    .subscribe();
+
+  await fetchTasks();
+});
+
+onUnmounted(() => {
+  if (channel) {
+    supabaseClient.removeChannel(channel);
+  }
 });
 
 </script>
