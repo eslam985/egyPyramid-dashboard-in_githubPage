@@ -67,8 +67,9 @@ const performSearch = async (query) => {
   if (/^\d+$/.test(query)) {
     try {
       // بما أن baseURL هو /api، سيصبح المسار النهائي: /api/search/id/{query}
-      const response = await api.get(`/search/id/${query}`); 
-      
+      // غير هذا السطر
+      const response = await api.get(`/api/search/id/${query}`);
+
       if (response.data && response.data.length > 0) {
         emit('update-search', response.data[0].media_title);
       }
