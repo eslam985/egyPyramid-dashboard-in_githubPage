@@ -48,7 +48,7 @@
 import { ref, watch } from 'vue';
 import api from '../services/api';
 import { useRouter } from 'vue-router';
-
+import { supabaseClient } from '../services/supabase';
 const searchQuery = ref('');
 const isPublishing = ref(false);
 const emit = defineEmits(['update-search', 'open-add-modal']);
@@ -87,9 +87,9 @@ watch(searchQuery, (newVal) => {
     performSearch(newVal);
   }, 300);
 });
-const logout = () => {
-  localStorage.removeItem('user_token');
-  router.push('/login');
+const logout = async () => {
+  await supabaseClient.auth.signOut(); // إغلاق الجلسة في سوبابيز (محلياً وعلى السيرفر)
+  router.push('/login'); // التوجيه لصفحة تسجيل الدخول
 };
 
 const triggerPublisher = async () => {
