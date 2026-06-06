@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue';
 import MediaDetails from '../views/MediaDetails.vue';
 import LoginView from '../views/LoginView.vue';
 import DatabaseView from '../views/DatabaseView.vue'; // استيراد الصفحة الجديدة
+import { supabaseClient } from '../services/supabase'; // تأكد من المسار الصحيح
 
 const routes = [
   { path: '/', name: 'Home', component: HomeView },
@@ -17,15 +18,16 @@ const router = createRouter({
 });
 
 // 3. الحارس الأمني (Navigation Guard)
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('user_token');
+router.beforeEach(async (to, from, next) => {
+  // جلب الجلسة مباشرة من سوبابيز
+  const { data: { session } } = await supabaseClient.auth.getSession();
 
-  // إذا كان المستخدم لا يملك توكن ويحاول دخول صفحة غير الـ login
-  if (to.name !== 'Login' && !token) {
+  // إذا كان المستخدم لا يملك جلسة نشطة ويحاول دخول صفحة غير الـ login
+  if (to.name !== 'Login' && !session) {
     next({ name: 'Login' });
   }
-  // إذا كان المستخدم مسجل دخول ويحاول العودة لصفحة الـ login
-  else if (to.name === 'Login' && token) {
+  // إذا كان المستخدم لديه جلسة ويحاول العودة لصفحة الـ login
+  else if (to.name === 'Login' && session) {
     next({ name: 'Home' });
   }
   else {
