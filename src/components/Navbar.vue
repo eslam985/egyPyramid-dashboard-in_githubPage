@@ -17,7 +17,8 @@
           @click="triggerPublisher">
           🚀 تشغيل محرك النشر
         </button>
-        <button @click="logout" class="bg-red-500 text-white px-4 py-2 rounded">
+        <button @click="logout"
+          class="bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 shadow-sm hover:shadow">
           تسجيل خروج
         </button>
       </div>
