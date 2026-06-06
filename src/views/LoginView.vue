@@ -2,7 +2,7 @@
     <div class="min-h-screen flex items-center justify-center bg-gray-900 px-4">
         <div class="max-w-md w-full bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700">
             <h2 class="text-3xl font-bold text-white text-center mb-8">تسجيل الدخول</h2>
-
+            <p v-if="errorMessage" class="text-red-500 text-center mt-4">{{ errorMessage }}</p>
             <form @submit.prevent="handleLogin" class="space-y-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-400 mb-2">البريد الإلكتروني</label>
@@ -31,19 +31,20 @@
 import { supabaseClient } from '../services/supabase';
 
 export default {
-    data() { 
-        return { 
-            email: '', 
-            password: '', 
-            loading: false 
-        }; 
+    data() {
+        return {
+            email: '',
+            password: '',
+            loading: false,
+            errorMessage: '' // أضف هذا المتغير
+        };
     },
     methods: {
         async handleLogin() {
             this.loading = true;
+            this.errorMessage = ''; // مسح أي خطأ قديم قبل المحاولة الجديدة
 
             try {
-                // تسجيل الدخول المباشر عبر سوبابيز بدون الحاجة لسيرفر وسيط
                 const { data, error } = await supabaseClient.auth.signInWithPassword({
                     email: this.email,
                     password: this.password,
@@ -51,13 +52,12 @@ export default {
 
                 if (error) throw error;
 
-                // سوبابيز تخزن التوكن تلقائياً في الـ LocalStorage
-                // ولكن إذا كان كودك القديم يعتمد على 'user_token' يدوياً:
-                localStorage.setItem('user_token', data.session.access_token);
-                
                 this.$router.push('/');
             } catch (e) {
-                alert('خطأ: ' + (e.message || 'بيانات الدخول غير صحيحة'));
+                // بدلاً من alert، حدث المتغير ليظهر في الصفحة
+                this.errorMessage = e.message === 'Invalid login credentials'
+                    ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+                    : e.message;
             } finally {
                 this.loading = false;
             }
