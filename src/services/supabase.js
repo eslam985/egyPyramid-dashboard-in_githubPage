@@ -1,0 +1,9 @@
+// /media/es/DDrive/projects/web-Veo/egyPyramid-dashboard-in_githubPage/src/services/supabase.js
+import { createClient } from "@supabase/supabase-js";
+
+// القراءة من السيكرتس لضمان الأمان
+const SUPABASE_URL = import.meta.env.SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.SUPABASE_SERVICE_KEY;
+
+// الحفاظ على اسمك القديم كما هو لتجنب تعديل باقي الملفات
+export const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
