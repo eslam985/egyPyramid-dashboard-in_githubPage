@@ -95,7 +95,7 @@ const props = defineProps({
   }
 });
 
-const mediaList = ref([]);
+const mediaList = shallowRef([]);
 const loading = ref(false);
 const currentStatus = ref('all');
 const currentCategory = ref('all');

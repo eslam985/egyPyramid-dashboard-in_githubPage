@@ -42,3 +42,11 @@
         @apply bg-white dark:bg-[#1e2939] shadow-card;
     }
 }
+
+/* هذا الكود يجبر الموبايل على استخدام الـ GPU وتنعيم الحركة */
+.media-card,
+.media-smooth-grid {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
