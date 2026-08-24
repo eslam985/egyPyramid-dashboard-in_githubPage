@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: '/egyPyramid-dashboard-in_githubPage/', // تأكد أن الاسم يطابق تماماً اسم المستودع
+  base: '/', // تأكد أن الاسم يطابق تماماً اسم المستودع
   plugins: [vue(), tailwindcss()],
   build: {
     outDir: 'dist', 
