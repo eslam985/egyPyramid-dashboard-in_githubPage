@@ -1,47 +1,61 @@
-  <template>
+<template>
+  <nav class="sticky top-0 z-50 my-card p-2 md:p-4 shadow-md bg-white dark:bg-gray-900 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    
+    <!-- القسم الأول: أزرار التحكم والروابط -->
+    <!-- تم استخدام flex متجاوب بدلاً من grid لمنع تمدد الأزرار بشكل مشوه -->
+    <div class="flex flex-wrap items-center gap-2 md:gap-4 order-2 md:order-1">
+      <button 
+        @click="logout"
+        class="text-xs md:text-base bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2.5 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-400 shadow-sm"
+      >
+        <i class="fa fa-sign-out-alt ml-1"></i> تسجيل خروج
+      </button>
 
-    <nav class="  mx-auto grid  grid-cols-1 md:grid-cols-2 gap-4 p-4 shadow-md  z-50 sticky top-px my-card">
-      <div class=" flex gap-4">
-        <router-link to="/database"
-          class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 transition flex items-center gap-2">
-          <i class="fa fa-database"></i> قاعدة البيانات
-        </router-link>
+      <button 
+        @click="triggerOpen"
+        class="text-xs md:text-base bg-blue-500 text-white px-4 py-2.5 rounded-lg hover:bg-blue-600 transition-all shadow-sm flex items-center gap-1.5"
+      >
+        <i class="fa fa-plus"></i> إضافة عمل
+      </button>
 
-        <button class=" relative z-60 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 cursor-pointer"
-          @click="triggerOpen">
-          <i class="fa fa-plus"></i> إضافة عمل
-        </button>
+      <router-link 
+        to="/database"
+        class="text-xs md:text-base bg-gray-700 hover:bg-gray-600 text-white px-4 py-2.5 rounded-lg transition shadow-sm flex items-center gap-1.5"
+      >
+        <i class="fa fa-database"></i> DB
+      </router-link>
+    </div>
 
+    <!-- القسم الثاني: شريط البحث وشعار الموقع -->
+    <!-- يظهر في الشاشات الصغيرة بالأعلى (عبر ترتيب order-1) لتجربة مستخدم أفضل -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:max-w-xl order-1 md:order-2">
+      
+      <!-- اللوجو / اسم الموقع -->
+      <router-link 
+        to="/"
+        class="text-center font-bold text-2xl text-yellow-500 tracking-tight whitespace-nowrap px-4 py-2 rounded-lg shadow-md bg-[linear-gradient(135deg,#8a8000_0,#000000_80%)] sm:order-2"
+      >
+        EGY PYRAMID
+      </router-link>
 
-        <button class="bg-[#ea580c] text-white px-4 py-0 rounded hover:bg-yellow-600 cursor-pointer"
-          @click="triggerPublisher">
-          🚀 تشغيل محرك النشر
-        </button>
-        <button @click="logout"
-          class="bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 shadow-sm hover:shadow">
-          تسجيل خروج
-        </button>
-      </div>
-
-      <div class="flex gap-4">
-        <div class="flex flex-row-reverse w-full">
-          <div
-            class="px-5 py-2.5 bg-primary text-white border border-primary rounded-l-lg flex items-center justify-center">
-            <i class="fa fa-search"></i>
-          </div>
-
-          <input v-model="searchQuery" type="text" placeholder="ابحث..."
-            class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-r-lg bg-white dark:bg-gray-800 text-gray-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+      <!-- حقل البحث المعدل والمصلح برمجياً وبصرياً -->
+      <div class="flex flex-row w-full sm:order-1" dir="ltr">
+        <input 
+          v-model="searchQuery" 
+          type="text" 
+          placeholder="ابحث هنا..."
+          class="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 rounded-l-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-right"
+        >
+        <div class="px-4 py-2.5 bg-primary text-white border border-primary rounded-r-lg flex items-center justify-center cursor-pointer">
+          <i class="fa fa-search"></i>
         </div>
-        <router-link to="/"
-          class="font-bold  max-w-50 text-3xl text-yellow-500 tracking-[-0.5px] whitespace-nowrap px-4 py-1 rounded-lg shadow-md bg-[linear-gradient(135deg,#8a8000_0,#000000_80%)]">
-          EGY PYRMID
-        </router-link>
       </div>
 
-    </nav>
+    </div>
 
-  </template>
+  </nav>
+</template>
+
 
 <script setup>
 import { ref, watch } from 'vue';

@@ -5,30 +5,30 @@
       <DownloadMonitor />
 
       <!-- رأس الصفحة مع الفلاتر -->
-      <header class="dashboard-header flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+      <header class="dashboard-header flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 md:mb-6 mb-3">
         <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
           إدارة المحتوى ({{ totalCount }})
         </h2>
 
-        <div class="filters-bar flex flex-wrap items-center gap-2">
+        <div class="grid grid-cols-4 gap-2">
           <!-- أزرار حالة النشر -->
-          <button @click="currentStatus = 'all'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          <button @click="currentStatus = 'all'" class="px-3 py-2 text-[11px] md:text-[16px] rounded-lg font-medium transition-colors"
             :class="currentStatus === 'all' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'">
             الكل
           </button>
           <button @click="currentStatus = 'published'"
-            class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            class="px-3 py-2 text-[11px] md:text-[16px] rounded-lg text-sm font-medium transition-colors"
             :class="currentStatus === 'published' ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'">
             ✅ منشور
           </button>
-          <button @click="currentStatus = 'draft'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          <button @click="currentStatus = 'draft'" class="px-3 py-2 text-[11px] md:text-[16px] rounded-lg text-sm font-medium transition-colors"
             :class="currentStatus === 'draft' ? 'bg-amber-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'">
             ⏳ غير منشور
           </button>
 
           <!-- تحديد النوع -->
           <select v-model="currentCategory"
-            class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-none focus:ring-2 focus:ring-primary outline-none">
+            class="px-3 py-2 text-[11px] md:text-[16px] rounded-lg  bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-none focus:ring-2 focus:ring-primary outline-none">
             <option value="all">كل الأنواع</option>
             <option value="tv">مسلسلات</option>
             <option value="movie">أفلام</option>

@@ -9,13 +9,13 @@
         <i class="fa fa-plus-circle"></i>
         <span>مهمة جديدة</span>
       </button>
-
-      <div v-for="task in activeTasks" :key="task.id"
+      <!-- هنا نستخدم المصفوفة المفلترة مباشرة دون v-if خارجي -->
+      <div v-for="task in filteredTasks" :key="task.id"
         class="progress-item bg-gradient-to-br from-gray-900 to-black border border-amber-600/30 rounded-xl p-3 shadow-lg text-[10px] w-full">
-        <div class="flex items-center justify-between mb-2 gap-1"> <span
-            class="task-name font-semibold text-amber-500 truncate max-w-[100%]">{{ task.task_name }}</span>
+        <div class="flex items-center justify-between mb-2 gap-1">
+          <span class="task-name font-semibold text-amber-500 truncate max-w-[100%]">{{ task.task_name }}</span>
 
-          <span class="status-text text-[10px]  max-w-[40%] truncate"
+          <span class="status-text text-[10px] max-w-[40%] truncate"
             :class="task.status_message.includes('جاري الرفع') ? 'text-cyan-400 animate-pulse' : 'text-gray-300'">
             {{ task.status_message }}
           </span>
@@ -28,7 +28,6 @@
             :style="{ width: task.progress_percent + '%' }"></div>
         </div>
       </div>
-
     </div>
 
     <!-- مودال إضافة مهمة جديدة -->
@@ -79,25 +78,32 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { supabaseClient } from '../services/supabase.js';
 
+// الحالات التفاعلية (Reactive States)
 const showModal = ref(false);
 const taskUrl = ref('');
 const taskName = ref('');
 const activeTasks = ref([]);
+let channel = null;
 
-// دالة جلب المهام
+// فلترة المهام لعرض حالة الـ processing فقط تلقائياً
+const filteredTasks = computed(() => {
+  return activeTasks.value.filter(task => task.status === 'processing');
+});
+
+// جلب البيانات الأولية من قاعدة البيانات
 const fetchTasks = async () => {
   const { data, error } = await supabaseClient
     .from('download_tasks')
     .select('*')
-    .order('created_at', { ascending: false }); // ترتيب الأحدث أولاً
-  
+    .order('created_at', { ascending: false });
+
   if (!error) activeTasks.value = data || [];
 };
 
-// إرسال مهمة جديدة
+// إرسال مهمة جديدة لقاعدة البيانات
 const submitTask = async () => {
   try {
     const { error } = await supabaseClient.from('download_tasks').insert([
@@ -106,7 +112,7 @@ const submitTask = async () => {
         task_name: taskName.value,
         status: 'idle',
         status_message: 'Waiting for Beast...',
-        progress_percent: 0 // قيمة افتراضية للبداية
+        progress_percent: 0
       }
     ]);
 
@@ -115,28 +121,27 @@ const submitTask = async () => {
     showModal.value = false;
     taskUrl.value = '';
     taskName.value = '';
-    // لا نحتاج لعمل fetchTasks هنا لأن الـ Realtime سيضيفها تلقائياً
   } catch (error) {
     alert('❌ فشل في إرسال المهمة: ' + error.message);
   }
 };
 
+// إدارة دورة حياة المكون عند العرض (Mounting)
 onMounted(async () => {
-  // 1. مسح شامل وصارم لأي قنوات قديمة عالقة
-  await supabaseClient.removeAllChannels(); 
+  // 1. تنظيف أي قنوات قديمة عالقة في الخلفية
+  await supabaseClient.removeAllChannels();
 
-  // 2. انتظر 100 ملي ثانية فقط لضمان استيعاب سوبابيز لعملية المسح
+  // 2. تأخير بسيط لضمان استقرار الاتصال مع Supabase
   setTimeout(async () => {
-    
-    // 3. تحميل البيانات الأولية
+    // 3. جلب البيانات الأولية
     await fetchTasks();
 
-    // 4. إعداد القناة اللحظية (الـ Realtime)
-    const channel = supabaseClient
+    // 4. إنشاء قناة الاستماع اللحظي الموحدة
+    channel = supabaseClient
       .channel('tasks-monitor')
       .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'download_tasks' }, 
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'download_tasks' },
         (payload) => {
           if (payload.eventType === 'INSERT') {
             activeTasks.value.unshift(payload.new);
@@ -151,48 +156,19 @@ onMounted(async () => {
         }
       );
 
-    // 5. الاشتراك الرسمي
+    // 5. تفعيل الاشتراك في القناة
     channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-            console.log('✅ تم الاتصال بنجاح بعد تنظيف الذاكرة');
-        }
-    });
-
-  }, 200); // هذا التأخير هو "المفتاح السحري"
-});
-
-// نحتاج لتعريف متغير للقناة خارج الـ onMounted لكي نتمكن من الوصول إليه في onUnmounted
-let channel;
-
-onMounted(async () => {
-  channel = supabaseClient.channel('tasks-monitor');
-
-  channel
-    .on(
-      'postgres_changes', 
-      { event: '*', schema: 'public', table: 'download_tasks' }, 
-      (payload) => {
-        if (payload.eventType === 'INSERT') {
-          activeTasks.value.unshift(payload.new);
-        } else if (payload.eventType === 'UPDATE') {
-          const index = activeTasks.value.findIndex(t => t.id === payload.new.id);
-          if (index !== -1) {
-            activeTasks.value[index] = payload.new;
-          }
-        } else if (payload.eventType === 'DELETE') {
-          activeTasks.value = activeTasks.value.filter(t => t.id !== payload.old.id);
-        }
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ تم الاتصال الموحد بنجاح وتنظيف الذاكرة');
       }
-    )
-    .subscribe();
-
-  await fetchTasks();
+    });
+  }, 200);
 });
 
+// تنظيف القناة عند مغادرة الصفحة أو تدمير المكون
 onUnmounted(() => {
   if (channel) {
     supabaseClient.removeChannel(channel);
   }
 });
-
 </script>
