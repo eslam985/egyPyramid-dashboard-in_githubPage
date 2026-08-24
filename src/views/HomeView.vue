@@ -5,14 +5,16 @@
       <DownloadMonitor />
 
       <!-- رأس الصفحة مع الفلاتر -->
-      <header class="dashboard-header flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 md:mb-6 mb-3">
+      <header
+        class="dashboard-header flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-4 md:mb-6 mb-3">
         <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
           إدارة المحتوى ({{ totalCount }})
         </h2>
 
         <div class="grid grid-cols-4 gap-2">
           <!-- أزرار حالة النشر -->
-          <button @click="currentStatus = 'all'" class="px-3 py-2 text-[11px] md:text-[16px] rounded-lg font-medium transition-colors"
+          <button @click="currentStatus = 'all'"
+            class="px-3 py-2 text-[11px] md:text-[16px] rounded-lg font-medium transition-colors"
             :class="currentStatus === 'all' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'">
             الكل
           </button>
@@ -21,7 +23,8 @@
             :class="currentStatus === 'published' ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'">
             ✅ منشور
           </button>
-          <button @click="currentStatus = 'draft'" class="px-3 py-2 text-[11px] md:text-[16px] rounded-lg text-sm font-medium transition-colors"
+          <button @click="currentStatus = 'draft'"
+            class="px-3 py-2 text-[11px] md:text-[16px] rounded-lg text-sm font-medium transition-colors"
             :class="currentStatus === 'draft' ? 'bg-amber-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'">
             ⏳ غير منشور
           </button>
@@ -37,7 +40,9 @@
       </header>
 
       <!-- شبكة البطاقات -->
-      <div class="grid grid-cols-3   sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 md:gap-4 p-2">
+      <!-- تم تعديل xl:grid-cols-8 إلى xl:grid-cols-6 لتخفيف العمليات الحسابية -->
+      <div
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4 p-2 media-smooth-grid">
         <template v-if="loading">
           <MediaSkeleton v-for="i in 12" :key="'skeleton-' + i" />
         </template>
@@ -223,3 +228,16 @@ const handleDelete = async (id) => {
 };
 
 </script>
+
+<style scoped>
+/* 1. إجبار المتصفح على تفعيل كارت الشاشة لتنعيم السكرول */
+.media-smooth-grid {
+  will-change: transform;
+}
+
+/* 2. تحسين أداء العناصر المكررة لمنع المتصفح من معالجة الكروت الخارجة عن الشاشة */
+:deep(.media-card) {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 350px; /* الحجم التقريبي المتوقع للكرت قبل تحميله */
+}
+</style>
