@@ -1,3 +1,4 @@
 {
-  "API_URL": "https://egystreamer-guardian-ultra.hf.space"
+  "API_URL": "https://egystreamer-guardian-ultra.hf.space",
+  "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5cHJkdm1na3RtbHJiZHF3amlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzA3NjUsImV4cCI6MjA4NzMwNjc2NX0.dR0M5s7AXuSVc1odTYfEjRTQqFe1iXs2j5sSjarsUeo"
 }
