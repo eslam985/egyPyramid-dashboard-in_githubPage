@@ -1,20 +1,28 @@
 import { createRouter, createWebHashHistory } from "vue-router";
-import HomeView from "../views/HomeView.vue";
-import MediaDetails from "../views/MediaDetails.vue";
-import LoginView from "../views/LoginView.vue";
-import DatabaseView from "../views/DatabaseView.vue"; // استيراد الصفحة الجديدة
-import { supabaseClient } from "../services/supabase"; // تأكد من المسار الصحيح
+import { supabaseClient } from "../services/supabase"; // الحفاظ على استيراد سوبابيز للحارس الأمني
 
 const routes = [
-  { path: "/", name: "Home", component: HomeView },
+  { 
+    path: "/", 
+    name: "Home", 
+    component: () => import("../views/HomeView.vue") // 👈 تحميل ذكي عند الحاجة فقط
+  },
   {
     path: "/media/:id",
     name: "MediaDetails",
-    component: MediaDetails,
+    component: () => import("../views/MediaDetails.vue"), // 👈 تحميل ذكي
     props: true,
   },
-  { path: "/login", name: "Login", component: LoginView },
-  { path: "/database", name: "Database", component: DatabaseView }, // إضافة المسار
+  { 
+    path: "/login", 
+    name: "Login", 
+    component: () => import("../views/LoginView.vue") // 👈 تحميل ذكي
+  },
+  { 
+    path: "/database", 
+    name: "Database", 
+    component: () => import("../views/DatabaseView.vue") // 👈 تحميل ذكي
+  },
 ];
 
 const router = createRouter({
@@ -22,19 +30,15 @@ const router = createRouter({
   routes,
 });
 
-// 3. الحارس الأمني (Navigation Guard)
+// الحارس الأمني (Navigation Guard) كما هو بدون تغيير
 router.beforeEach(async (to, from, next) => {
-  // جلب الجلسة مباشرة من سوبابيز
   const {
     data: { session },
   } = await supabaseClient.auth.getSession();
 
-  // إذا كان المستخدم لا يملك جلسة نشطة ويحاول دخول صفحة غير الـ login
   if (to.name !== "Login" && !session) {
     next({ name: "Login" });
-  }
-  // إذا كان المستخدم لديه جلسة ويحاول العودة لصفحة الـ login
-  else if (to.name === "Login" && session) {
+  } else if (to.name === "Login" && session) {
     next({ name: "Home" });
   } else {
     next();

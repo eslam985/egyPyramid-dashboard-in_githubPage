@@ -80,13 +80,11 @@
 
 <script setup>
 import Swal from 'sweetalert2';
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
-import { supabaseClient } from '../services/supabase'; // تأكد أنه استيراد واحد فقط
+import { ref, shallowRef, computed, onMounted, watch, onUnmounted } from 'vue'; // 👈 تم الإصلاح هنا
+import { supabaseClient } from '../services/supabase';
 import MediaCard from '../components/MediaCard.vue';
 import DownloadMonitor from '../components/DownloadMonitor.vue';
 import MediaSkeleton from '../components/MediaSkeleton.vue';
-
-// احذف سطر import api من هنا تماماً
 
 const props = defineProps({
   search: {
@@ -101,54 +99,54 @@ const currentStatus = ref('all');
 const currentCategory = ref('all');
 const currentPage = ref(1);
 const totalPages = ref(1);
-const totalCount = ref(0); // العدد الإجمالي للعناصر (للعرض في العنوان)
+const totalCount = ref(0);
 
+let channel = null; // 👈 تعريف متغير القناة هنا ليكون متاحاً لـ onUnmounted بشكل سليم
 
-// 2. جوه الـ onMounted، زود الـ channel بعد استدعاء loadMediaList
 onMounted(() => {
   // 1. التحميل الأولي للبيانات
   loadMediaList(1);
 
-  // 2. تفعيل المزامنة اللحظية مرة واحدة فقط
-  const channel = supabaseClient
+  // 2. تفعيل المزامنة اللحظية وحفظها في المتغير العام
+  channel = supabaseClient
     .channel('public:medias_list')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'medias' }, (payload) => {
       console.log('تحديث لحظي: جاري تحديث القائمة...');
       loadMediaList(currentPage.value);
-    })
-    .subscribe();
+    });
+
+  channel.subscribe();
 });
 
 onUnmounted(() => {
-  supabaseClient.channel('public:medias_list').unsubscribe();
+  // 👈 تنظيف وإلغاء اشتراك القناة بشكل صارم وآمن لمنع أي ثقل في الخلفية
+  if (channel) {
+    supabaseClient.removeChannel(channel);
+  }
 });
 
 // دالة جلب البيانات
 const loadMediaList = async (page = 1) => {
   loading.value = true;
   try {
-    const limit = 32; // نفس العدد اللي انت محدده في الـ Pagination
+    const limit = 32;
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    // بداية الاستعلام
     let query = supabaseClient
       .from('medias')
-      .select('*', { count: 'exact' });
+      .select('id, title,  poster_url, category, year, rating', { count: 'exact' });
 
-    // فلتر الحالة (منشور / مسودة)
     if (currentStatus.value === 'published') {
       query = query.eq('is_published', true);
     } else if (currentStatus.value === 'draft') {
       query = query.eq('is_published', false);
     }
 
-    // فلتر النوع (فيلم / مسلسل)
     if (currentCategory.value !== 'all') {
       query = query.eq('category', currentCategory.value);
     }
 
-    // فلتر البحث (Search)
     if (props.search) {
       query = query.ilike('title', `%${props.search}%`);
     }
@@ -175,11 +173,9 @@ const loadMediaList = async (page = 1) => {
 watch(
   [() => props.search, currentStatus, currentCategory],
   () => {
-    loadMediaList(1); // العودة للصفحة الأولى
+    loadMediaList(1);
   }
 );
-
-
 
 const handleDelete = async (id) => {
   const result = await Swal.fire({
@@ -226,8 +222,8 @@ const handleDelete = async (id) => {
     }
   }
 };
-
 </script>
+
 
 <style scoped>
 /* 1. إجبار المتصفح على تفعيل كارت الشاشة لتنعيم السكرول */
@@ -238,6 +234,7 @@ const handleDelete = async (id) => {
 /* 2. تحسين أداء العناصر المكررة لمنع المتصفح من معالجة الكروت الخارجة عن الشاشة */
 :deep(.media-card) {
   content-visibility: auto;
-  contain-intrinsic-size: 0 350px; /* الحجم التقريبي المتوقع للكرت قبل تحميله */
+  contain-intrinsic-size: 0 350px;
+  /* الحجم التقريبي المتوقع للكرت قبل تحميله */
 }
 </style>

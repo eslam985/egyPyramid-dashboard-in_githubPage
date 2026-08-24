@@ -1,22 +1,25 @@
 <template>
   <div>
     <!-- الحاوية العائمة لمتابعة التحميلات -->
-    <div class="fixed bottom-10 right-4 w-[400px] max-h-96 overflow-y-auto overflow-x-hidden z-50 flex flex-col flex-col-reverse
- gap-2">
+    <!-- 🌟 تم إضافة كلاس transform translate-z-0 لتسريع عتاد الموبايل GPU -->
+    <div class="fixed bottom-10 right-4 w-[400px] max-h-96 overflow-y-auto overflow-x-hidden z-50 flex flex-col flex-col-reverse gap-2 transform translate-z-0">
 
       <button @click="showModal = true"
         class="w-[150px] items-start bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2">
         <i class="fa fa-plus-circle"></i>
         <span>مهمة جديدة</span>
       </button>
-      <!-- هنا نستخدم المصفوفة المفلترة مباشرة دون v-if خارجي -->
-      <div v-for="task in filteredTasks" :key="task.id"
+      
+      <!-- هنا نستخدم مصفوفة activeTasks مباشرة لأنها أصبحت تأتي مفلترة وجاهزة من السيرفر وخفيفة جداً -->
+      <div v-for="task in activeTasks" :key="task.id"
         class="progress-item bg-gradient-to-br from-gray-900 to-black border border-amber-600/30 rounded-xl p-3 shadow-lg text-[10px] w-full">
         <div class="flex items-center justify-between mb-2 gap-1">
           <span class="task-name font-semibold text-amber-500 truncate max-w-[100%]">{{ task.task_name }}</span>
 
-          <span class="status-text text-[10px] max-w-[40%] truncate"
-            :class="task.status_message.includes('جاري الرفع') ? 'text-cyan-400 animate-pulse' : 'text-gray-300'">
+          <!-- 🌟 تم استبدال animate-pulse بأنيميشن أيقونة دوران fa-spin خفيف جداً يرحم معالج الموبايل -->
+          <span class="status-text text-[10px] max-w-[40%] truncate flex items-center gap-1"
+            :class="task.status_message.includes('جاري الرفع') ? 'text-cyan-400' : 'text-gray-300'">
+            <i v-if="task.status_message.includes('جاري الرفع')" class="fa fa-spinner fa-spin text-[8px]"></i>
             {{ task.status_message }}
           </span>
 
@@ -47,15 +50,13 @@
           <div class="space-y-4">
             <!-- رابط المصدر -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رابط
-                المصدر</label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رابط المصدر</label>
               <input v-model="taskUrl" type="text" placeholder="https://example.com/file.mp4" required
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-secondary-dark text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition" />
             </div>
             <!-- اسم المهمة -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم
-                المهمة</label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم المهمة</label>
               <input v-model="taskName" type="text" placeholder="فيلم XYZ" required
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-secondary-dark text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary transition" />
             </div>
@@ -78,26 +79,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { supabaseClient } from '../services/supabase.js';
 
-// الحالات التفاعلية (Reactive States)
 const showModal = ref(false);
 const taskUrl = ref('');
 const taskName = ref('');
 const activeTasks = ref([]);
 let channel = null;
 
-// فلترة المهام لعرض حالة الـ processing فقط تلقائياً
-const filteredTasks = computed(() => {
-  return activeTasks.value.filter(task => task.status === 'processing');
-});
-
-// جلب البيانات الأولية من قاعدة البيانات
+// جلب البيانات الأولية من قاعدة البيانات (مفلترة من السيرفر مباشرة لتصبح خفيفة جداً)
 const fetchTasks = async () => {
   const { data, error } = await supabaseClient
     .from('download_tasks')
-    .select('*')
+    .select('id, task_name, status, status_message, progress_percent') // 👈 جلب الأعمدة المحتاجة فقط
+    .eq('status', 'processing') // 👈 🌟 السر هنا: جلب الجاري معالجته فقط، لتهبط الـ 38kB إلى الصفر تقريباً
     .order('created_at', { ascending: false });
 
   if (!error) activeTasks.value = data || [];
@@ -128,27 +124,37 @@ const submitTask = async () => {
 
 // إدارة دورة حياة المكون عند العرض (Mounting)
 onMounted(async () => {
-  // 1. تنظيف أي قنوات قديمة عالقة في الخلفية
   await supabaseClient.removeAllChannels();
 
-  // 2. تأخير بسيط لضمان استقرار الاتصال مع Supabase
   setTimeout(async () => {
-    // 3. جلب البيانات الأولية
     await fetchTasks();
 
-    // 4. إنشاء قناة الاستماع اللحظي الموحدة
+    // إنشاء قناة الاستماع اللحظي الذكي
     channel = supabaseClient
       .channel('tasks-monitor')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'download_tasks' },
         (payload) => {
+          // التعامل الذكي مع تدفق الـ Realtime بناءً على فلتر الـ processing
           if (payload.eventType === 'INSERT') {
-            activeTasks.value.unshift(payload.new);
+            if (payload.new.status === 'processing') {
+              activeTasks.value.unshift(payload.new);
+            }
           } else if (payload.eventType === 'UPDATE') {
             const index = activeTasks.value.findIndex(t => t.id === payload.new.id);
-            if (index !== -1) {
-              activeTasks.value[index] = payload.new;
+            
+            if (payload.new.status === 'processing') {
+              if (index !== -1) {
+                activeTasks.value[index] = payload.new;
+              } else {
+                activeTasks.value.unshift(payload.new);
+              }
+            } else {
+              // إذا تغيرت حالتها ولم تعد processing (اكتملت مثلاً) احذفها فوراً من رامات الموبايل ليرتاح السكرول
+              if (index !== -1) {
+                activeTasks.value.splice(index, 1);
+              }
             }
           } else if (payload.eventType === 'DELETE') {
             activeTasks.value = activeTasks.value.filter(t => t.id !== payload.old.id);
@@ -156,16 +162,11 @@ onMounted(async () => {
         }
       );
 
-    // 5. تفعيل الاشتراك في القناة
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('✅ تم الاتصال الموحد بنجاح وتنظيف الذاكرة');
-      }
-    });
+    channel.subscribe();
   }, 200);
 });
 
-// تنظيف القناة عند مغادرة الصفحة أو تدمير المكون
+// تنظيف القناة بالكامل فور مغادرة الصفحة لمنع أي تهنيج في الخلفية
 onUnmounted(() => {
   if (channel) {
     supabaseClient.removeChannel(channel);

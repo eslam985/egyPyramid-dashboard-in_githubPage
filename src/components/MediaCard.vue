@@ -1,14 +1,17 @@
 <template>
-  <!-- 👈 أضفنا كلاس "media-card" هنا لتفعيله في كود الـ CSS الذكي -->
+  <!-- الحاوية الرئيسية للكارت مع كلاس التسريع media-card -->
   <div v-if="media" @click="goToDetails(media.id)"
     class="media-card group relative flex flex-col rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-secondary-dark shadow-card hover:shadow-xl transition-all duration-300 ease-out cursor-pointer hover:-translate-y-1">
 
-    <!-- الجزء العلوي: الصورة والشارة -->
-    <div class="relative aspect-[1/1] overflow-hidden bg-gray-100 dark:bg-gray-800">
-      <img :src="media.poster_url || defaultPoster" :alt="media.title"
-        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+    <!-- الجزء العلوي: تم توحيد الحاوية هنا بنسبة aspect-[2/3] وحجز المساحة لمنع الاهتزاز -->
+    <div class="relative w-full aspect-[2/3] bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0">
 
-      <!-- 🌟 تم استبدال backdrop-blur بـ bg-blue-600/90 و bg-black/80 لخفة تامة في السكرول -->
+      <!-- الصورة المصلحة برمجياً للتحميل الذكي -->
+      <img :src="media.poster_url || defaultPoster" :alt="media.title"
+        class="w-full h-full object-cover transition-transform duration-500 md:group-hover:scale-110" loading="lazy"
+        decoding="async" />
+
+      <!-- شارات المحتوى مستقرة الآن في مكانها الصحيح فوق أبعاد البوستر -->
       <!-- شارة التصنيف (فيلم / مسلسل) -->
       <span :class="[
         'absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-white shadow-lg z-10',
@@ -17,13 +20,13 @@
         {{ media.category === 'tv' ? 'مسلسل' : 'فيلم' }}
       </span>
 
-      <!-- شارة السنة إذا كانت موجودة -->
+      <!-- شارة السنة -->
       <span v-if="media.year"
         class="absolute bottom-3 left-3 px-2 py-1 rounded-md bg-black/75 text-white text-xs font-medium">
         {{ media.year }}
       </span>
 
-      <!-- شارة التقييم إذا كانت موجودة -->
+      <!-- شارة التقييم -->
       <span v-if="media.rating"
         class="absolute top-3 left-3 px-2 py-1 rounded-md bg-yellow-500 text-white text-xs font-bold flex items-center gap-1">
         <i class="fa fa-star text-yellow-100"></i>

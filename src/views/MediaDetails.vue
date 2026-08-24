@@ -18,7 +18,7 @@
 
         <!-- الصورة -->
         <div class="flex justify-center poster-side shrink-0 my-3">
-          <img :src="mediaData.poster_url" :alt="mediaData.title" class="max-w-75 aspect-square rounded-xl shadow-lg"
+          <img :src="mediaData.poster_url" decoding="async" :alt="mediaData.title" class="max-w-75 aspect-square rounded-xl shadow-lg"
             loading="lazy">
         </div>
 
