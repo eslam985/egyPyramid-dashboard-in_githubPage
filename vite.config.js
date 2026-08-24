@@ -1,16 +1,18 @@
-// /media/es/DDrive/projects/web-Veo/egyPyramid-dashboard-in_githubPage/vite.config.js
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: '/', // تأكد أن الاسم يطابق تماماً اسم المستودع
+  base: '/',
   plugins: [vue(), tailwindcss()],
   build: {
     outDir: 'dist', 
     emptyOutDir: true,
-    // ✅ احذف سطر terser أو غيره لـ 'esbuild' وهو الافتراضي
     minify: 'esbuild', 
-    sourcemap: false
+    sourcemap: false,
+    target: 'esnext'
+  },
+  esbuild: {
+    target: 'esnext'
   }
 })
