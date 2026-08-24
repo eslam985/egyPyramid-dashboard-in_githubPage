@@ -33,12 +33,10 @@
           <input v-model="searchQuery" type="text" placeholder="ابحث..."
             class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-r-lg bg-white dark:bg-gray-800 text-gray-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
         </div>
-        <div
+        <router-link to="/"
           class="font-bold  max-w-50 text-3xl text-yellow-500 tracking-[-0.5px] whitespace-nowrap px-4 py-1 rounded-lg shadow-md bg-[linear-gradient(135deg,#8a8000_0,#000000_80%)]">
-
-          <a href="/egyPyramid-dashboard-in_githubPage/#/"> EGY PYRMID</a>
-
-        </div>
+          EGY PYRMID
+        </router-link>
       </div>
 
     </nav>
