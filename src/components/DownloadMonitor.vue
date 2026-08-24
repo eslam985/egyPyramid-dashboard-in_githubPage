@@ -123,20 +123,23 @@ const submitTask = async () => {
 };
 
 // إدارة دورة حياة المكون عند العرض (Mounting)
+// إدارة دورة حياة المكون عند العرض (Mounting)
 onMounted(async () => {
+  // 1. تنظيف أي قنوات قديمة عالقة لمنع التداخل والاشتراك المزدوج
   await supabaseClient.removeAllChannels();
 
+  // 2. تأخير بسيط لضمان استيعاب سوبابيز لعملية المسح
   setTimeout(async () => {
+    // 3. جلب البيانات الأولية من السيرفر
     await fetchTasks();
 
-    // إنشاء قناة الاستماع اللحظي الذكي
+    // 4. بناء القناة وإضافة مستمعي التغييرات في سطر منفصل (دون استدعاء subscribe هنا)
     channel = supabaseClient
       .channel('tasks-monitor')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'download_tasks' },
         (payload) => {
-          // التعامل الذكي مع تدفق الـ Realtime بناءً على فلتر الـ processing
           if (payload.eventType === 'INSERT') {
             if (payload.new.status === 'processing') {
               activeTasks.value.unshift(payload.new);
@@ -151,7 +154,6 @@ onMounted(async () => {
                 activeTasks.value.unshift(payload.new);
               }
             } else {
-              // إذا تغيرت حالتها ولم تعد processing (اكتملت مثلاً) احذفها فوراً من رامات الموبايل ليرتاح السكرول
               if (index !== -1) {
                 activeTasks.value.splice(index, 1);
               }
@@ -162,9 +164,16 @@ onMounted(async () => {
         }
       );
 
-    channel.subscribe();
+    // 5. 🌟 خطوة الحل: تشغيل دالة الاشتراك الصريحة على المتغير الجاهز في سطر مستقل تماماً
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ تم الاتصال والاشتراك اللحظي الموحد بنجاح');
+      }
+    });
+
   }, 200);
 });
+
 
 // تنظيف القناة بالكامل فور مغادرة الصفحة لمنع أي تهنيج في الخلفية
 onUnmounted(() => {
