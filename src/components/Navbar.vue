@@ -36,7 +36,7 @@
         <div
           class="font-bold  max-w-50 text-3xl text-yellow-500 tracking-[-0.5px] whitespace-nowrap px-4 py-1 rounded-lg shadow-md bg-[linear-gradient(135deg,#8a8000_0,#000000_80%)]">
 
-          <a href="/"> EGY PYRMID</a>
+          <a href="/egyPyramid-dashboard-in_githubPage/"> EGY PYRMID</a>
 
         </div>
       </div>
