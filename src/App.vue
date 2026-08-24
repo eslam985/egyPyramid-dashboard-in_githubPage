@@ -1,3 +1,4 @@
+<!-- /media/es/DDrive/projects/web-Veo/egyPyramid-dashboard-in_githubPage/src/App.vue -->
 <script setup>
 import { ref, provide, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router' // 1. استيراد useRoute

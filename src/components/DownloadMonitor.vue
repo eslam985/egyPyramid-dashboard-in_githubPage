@@ -2,14 +2,15 @@
   <div>
     <!-- الحاوية العائمة لمتابعة التحميلات -->
     <!-- 🌟 تم إضافة كلاس transform translate-z-0 لتسريع عتاد الموبايل GPU -->
-    <div class="fixed bottom-10 right-4 w-[400px] max-h-96 overflow-y-auto overflow-x-hidden z-50 flex flex-col flex-col-reverse gap-2 transform translate-z-0">
+    <div
+      class="fixed bottom-10 right-4 w-[400px] max-h-96 overflow-y-auto overflow-x-hidden z-50 flex flex-col flex-col-reverse gap-2 transform translate-z-0">
 
       <button @click="showModal = true"
         class="w-[150px] items-start bg-primary hover:bg-primary-dark text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2">
         <i class="fa fa-plus-circle"></i>
         <span>مهمة جديدة</span>
       </button>
-      
+
       <!-- هنا نستخدم مصفوفة activeTasks مباشرة لأنها أصبحت تأتي مفلترة وجاهزة من السيرفر وخفيفة جداً -->
       <div v-for="task in activeTasks" :key="task.id"
         class="progress-item bg-gradient-to-br from-gray-900 to-black border border-amber-600/30 rounded-xl p-3 shadow-lg text-[10px] w-full">
@@ -77,7 +78,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { supabaseClient } from '../services/supabase.js';
@@ -86,14 +86,16 @@ const showModal = ref(false);
 const taskUrl = ref('');
 const taskName = ref('');
 const activeTasks = ref([]);
-let channel = null;
 
-// جلب البيانات الأولية من قاعدة البيانات (مفلترة من السيرفر مباشرة لتصبح خفيفة جداً)
+let channel = null;
+let initTimer = null; // 👈 1. متغير لحفظ التايمر ومنع تسريبه في الخلفية
+
+// جلب البيانات الأولية
 const fetchTasks = async () => {
   const { data, error } = await supabaseClient
     .from('download_tasks')
-    .select('id, task_name, status, status_message, progress_percent') // 👈 جلب الأعمدة المحتاجة فقط
-    .eq('status', 'processing') // 👈 🌟 السر هنا: جلب الجاري معالجته فقط، لتهبط الـ 38kB إلى الصفر تقريباً
+    .select('id, task_name, status, status_message, progress_percent')
+    .eq('status', 'processing')
     .order('created_at', { ascending: false });
 
   if (!error) activeTasks.value = data || [];
@@ -122,63 +124,70 @@ const submitTask = async () => {
   }
 };
 
-// إدارة دورة حياة المكون عند العرض (Mounting)
-// إدارة دورة حياة المكون عند العرض (Mounting)
 onMounted(async () => {
-  // 1. تنظيف أي قنوات قديمة عالقة لمنع التداخل والاشتراك المزدوج
-  await supabaseClient.removeAllChannels();
+  // تدمير أي قنوات قديمة باسم tasks-monitor فوراً قبل البدء
+  try {
+    const existingChannel = supabaseClient.getChannels().find(c => c.topic === 'realtime:tasks-monitor');
+    if (existingChannel) {
+      await supabaseClient.removeChannel(existingChannel);
+    }
+  } catch (e) {
+    console.log("لا توجد قنوات متداخلة");
+  }
 
-  // 2. تأخير بسيط لضمان استيعاب سوبابيز لعملية المسح
-  setTimeout(async () => {
-    // 3. جلب البيانات الأولية من السيرفر
+  // حفظ التايمر في متغير لتتمكن دالة onUnmounted من قتله إذا غادر المستخدم الصفحة
+  initTimer = setTimeout(async () => {
     await fetchTasks();
 
-    // 4. بناء القناة وإضافة مستمعي التغييرات في سطر منفصل (دون استدعاء subscribe هنا)
-    channel = supabaseClient
-      .channel('tasks-monitor')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'download_tasks' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            if (payload.new.status === 'processing') {
+    // بناء القناة بالكامل بشكل منفصل
+    const myChannel = supabaseClient.channel('tasks-monitor');
+
+    myChannel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'download_tasks' },
+      (payload) => {
+        if (payload.eventType === 'INSERT') {
+          if (payload.new.status === 'processing') {
+            activeTasks.value.unshift(payload.new);
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const index = activeTasks.value.findIndex(t => t.id === payload.new.id);
+
+          if (payload.new.status === 'processing') {
+            if (index !== -1) {
+              activeTasks.value[index] = payload.new;
+            } else {
               activeTasks.value.unshift(payload.new);
             }
-          } else if (payload.eventType === 'UPDATE') {
-            const index = activeTasks.value.findIndex(t => t.id === payload.new.id);
-            
-            if (payload.new.status === 'processing') {
-              if (index !== -1) {
-                activeTasks.value[index] = payload.new;
-              } else {
-                activeTasks.value.unshift(payload.new);
-              }
-            } else {
-              if (index !== -1) {
-                activeTasks.value.splice(index, 1);
-              }
+          } else {
+            if (index !== -1) {
+              activeTasks.value.splice(index, 1);
             }
-          } else if (payload.eventType === 'DELETE') {
-            activeTasks.value = activeTasks.value.filter(t => t.id !== payload.old.id);
           }
+        } else if (payload.eventType === 'DELETE') {
+          activeTasks.value = activeTasks.value.filter(t => t.id !== payload.old.id);
         }
-      );
-
-    // 5. 🌟 خطوة الحل: تشغيل دالة الاشتراك الصريحة على المتغير الجاهز في سطر مستقل تماماً
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('✅ تم الاتصال والاشتراك اللحظي الموحد بنجاح');
       }
-    });
+    );
 
-  }, 200);
+    // حفظ النسخة الجاهزة فقط في المتغير العلوي وتشغيل الاشتراك
+    channel = myChannel;
+    channel.subscribe();
+
+  }, 150);
 });
 
+// التنظيف الصارم لحماية رامات الموبايل ومنع تداخل القنوات
+onUnmounted(async () => {
+  // 👈 2. قتل التايمر فوراً لو كان حياً لمنع تشغيل الكود بعد الخروج من الصفحة
+  if (initTimer) {
+    clearTimeout(initTimer);
+  }
 
-// تنظيف القناة بالكامل فور مغادرة الصفحة لمنع أي تهنيج في الخلفية
-onUnmounted(() => {
+  // 👈 3. إغلاق وإزالة القناة يدوياً وبشكل صريح
   if (channel) {
-    supabaseClient.removeChannel(channel);
+    await supabaseClient.removeChannel(channel);
+    channel = null;
   }
 });
 </script>

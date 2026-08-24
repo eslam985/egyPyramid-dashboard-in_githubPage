@@ -1,8 +1,6 @@
 <template>
   <div id="app">
     <main class="w-full max-w-[1400px] mx-auto py-4 md:p-8">
-      <!-- مكون مراقبة التحميل (إذا كان موجوداً) -->
-      <DownloadMonitor />
 
       <!-- رأس الصفحة مع الفلاتر -->
       <header
@@ -83,7 +81,6 @@ import Swal from 'sweetalert2';
 import { ref, shallowRef, computed, onMounted, watch, onUnmounted } from 'vue'; // 👈 تم الإصلاح هنا
 import { supabaseClient } from '../services/supabase';
 import MediaCard from '../components/MediaCard.vue';
-import DownloadMonitor from '../components/DownloadMonitor.vue';
 import MediaSkeleton from '../components/MediaSkeleton.vue';
 
 const props = defineProps({
